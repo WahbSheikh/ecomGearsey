@@ -1,106 +1,26 @@
-import React, { createContext, useContext, useReducer } from "react";
+import React, { createContext, useContext, useReducer, useEffect } from "react";
+import { useAuth } from "../../hooks/useAuth";
+import modeldata from "./modeldata";
 
 const AppContext = createContext();
 
-const initialState = {
-  user: {
-    id: 1,
-    name: "John Doe",
-    isLoggedIn: true,
-    isSeller: true,
-  },
-  cart: [],
-  notifications: [],
-  products: [
-    {
-      id: 1,
-      title: "1968 Mustang Carburetor",
-      seller: "John's Auto Parts",
-      price: 120,
-      type: "fixed",
-      condition: "Used (Good)",
-      category: "engines", // Updated to match category IDs
-      description:
-        "Original carburetor, fits 1968 Mustang models. Excellent working condition with all original parts intact.",
-      images: [
-        "https://images.pexels.com/photos/3807277/pexels-photo-3807277.jpeg?auto=compress&cs=tinysrgb&w=500",
-        "https://images.pexels.com/photos/3807278/pexels-photo-3807278.jpeg?auto=compress&cs=tinysrgb&w=500",
-      ],
-      inStock: true,
-    },
-    {
-      id: 2,
-      title: "Vintage Steering Wheel (1960s)",
-      seller: "Classic Car Vault",
-      currentBid: 250,
-      startingPrice: 200,
-      type: "auction",
-      condition: "Excellent",
-      category: "accessories", // Updated to match category IDs
-      description:
-        "Beautiful vintage steering wheel from the 1960s. Perfect for classic car restoration projects.",
-      images: [
-        "https://images.pexels.com/photos/3807275/pexels-photo-3807275.jpeg?auto=compress&cs=tinysrgb&w=500",
-        "https://images.pexels.com/photos/3807279/pexels-photo-3807279.jpeg?auto=compress&cs=tinysrgb&w=500",
-      ],
-      timeLeft: { hours: 2, minutes: 15 },
-      bids: [
-        { bidder: "Alex P.", amount: 250, time: "2 mins ago" },
-        { bidder: "Sara K.", amount: 240, time: "10 mins ago" },
-      ],
-    },
-    {
-      id: 3,
-      title: "Chrome Exhaust Tips Set",
-      seller: "Performance Parts Pro",
-      price: 85,
-      type: "fixed",
-      condition: "New",
-      category: "body", // Updated to match category IDs
-      description:
-        "High-quality chrome exhaust tips, universal fit for most vehicles.",
-      images: [
-        "https://images.pexels.com/photos/3807276/pexels-photo-3807276.jpeg?auto=compress&cs=tinysrgb&w=500",
-        "https://images.pexels.com/photos/3807280/pexels-photo-3807280.jpeg?auto=compress&cs=tinysrgb&w=500",
-      ],
-      inStock: true,
-    },
-  ],
-  userBids: [
-    {
-      id: 2,
-      productTitle: "Vintage Steering Wheel (1960s)",
-      currentBid: 250,
-      status: "leading",
-      timeLeft: { hours: 1, minutes: 45 },
-    },
-  ],
-  userListings: [
-    {
-      id: 1,
-      title: "1968 Mustang Carburetor",
-      type: "fixed",
-      status: "active",
-      price: 120,
-    },
-    {
-      id: 2,
-      title: "Vintage Steering Wheel (1960s)",
-      type: "auction",
-      status: "active",
-      currentBid: 250,
-      timeLeft: { hours: 2, minutes: 0 },
-    },
-  ],
-  filters: {
-    show: "all",
-    category: "all",
-    sortBy: "latest",
-  },
-};
-
 function appReducer(state, action) {
   switch (action.type) {
+    case "SET_USER":
+      return {
+        ...state,
+        user: action.payload,
+      };
+
+    case "LOGOUT":
+      return {
+        ...state,
+        user: null,
+        cart: [],
+        userBids: [],
+        userListings: [],
+      };
+
     case "ADD_TO_CART":
       if (state.cart.some((item) => item.id === action.payload.id)) {
         return state; // already in cart
@@ -111,11 +31,6 @@ function appReducer(state, action) {
       };
 
     case "REMOVE_FROM_CART":
-      return {
-        ...state,
-        cart: state.cart.filter((item) => item.id !== action.payload),
-      };
-    case "REMOVE_CART_ITEM":
       return {
         ...state,
         cart: state.cart.filter((item) => item.id !== action.payload),
@@ -140,6 +55,20 @@ function appReducer(state, action) {
               }
             : product
         ),
+        userBids: [
+          ...state.userBids,
+          {
+            id: action.payload.productId,
+            productTitle: state.products.find(
+              (p) => p.id === action.payload.productId
+            )?.title,
+            currentBid: action.payload.amount,
+            status: "leading",
+            timeLeft: state.products.find(
+              (p) => p.id === action.payload.productId
+            )?.timeLeft,
+          },
+        ],
       };
 
     case "ADD_NOTIFICATION":
@@ -180,13 +109,50 @@ function appReducer(state, action) {
         }),
       };
 
+    case "SET_USER_LISTINGS":
+      return {
+        ...state,
+        userListings: action.payload,
+      };
+
+    case "SET_USER_BIDS":
+      return {
+        ...state,
+        userBids: action.payload,
+      };
+
     default:
       return state;
   }
 }
 
 export function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+  const [state, dispatch] = useReducer(appReducer, modeldata());
+  const { user, isPending } = useAuth();
+
+  // Sync Better Auth user with AppContext
+  useEffect(() => {
+    if (!isPending) {
+      if (user) {
+        dispatch({
+          type: "SET_USER",
+          payload: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            phone: user.phone,
+            address: user.address,
+            rating: user.rating || 0,
+            total_reviews: user.total_reviews || 0,
+            isLoggedIn: true,
+          },
+        });
+      } else {
+        dispatch({ type: "LOGOUT" });
+      }
+    }
+  }, [user, isPending]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

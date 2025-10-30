@@ -4,18 +4,15 @@ import { Search, ShoppingCart, User, ChevronDown, Menu, X } from "lucide-react";
 import { useAppContext } from "../../../../config/context/AppContext";
 import { useAuth } from "../../../../hooks/useAuth";
 
-
 function Navigation() {
   const { state } = useAppContext();
-  const {signOut , user , loading } = useAuth();
+  const { signOut, user, loading } = useAuth();
   console.log("Navigation user:", user);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-
- 
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -27,13 +24,11 @@ function Navigation() {
     e.preventDefault();
 
     if (location.pathname === "/") {
-      // Already on homepage, just scroll to marketplace section
       document.getElementById("marketplace")?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
     } else {
-      // Navigate to homepage first, then scroll
       navigate("/");
       setTimeout(() => {
         document.getElementById("marketplace")?.scrollIntoView({
@@ -43,19 +38,182 @@ function Navigation() {
       }, 100);
     }
 
-    // Close mobile menu if open
     setIsMenuOpen(false);
   };
 
   const handleLogout = async () => {
     await signOut();
     setIsUserMenuOpen(false);
-    navigate('/');
+    navigate("/");
   };
 
   const handleLoginClick = () => {
-    navigate('/login');
+    navigate("/login");
     setIsUserMenuOpen(false);
+  };
+
+  // Helpers for role-based rendering
+  const role = user?.role ?? null;
+  const isAdmin = role === "admin" || user?.isAdmin;
+  const isSeller = role === "seller" || user?.isSeller;
+  const isCustomer = role === "customer" || !role; // fallback to customer
+
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
+  // Desktop links (Home, Marketplace, and role-specific action(s))
+  const DesktopLinks = () => (
+    <div className="hidden md:flex items-center space-x-8">
+      <Link
+        to="/"
+        className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+      >
+        Home
+      </Link>
+
+      <a
+        href="#marketplace"
+        onClick={handleMarketplaceClick}
+        className="text-font-main hover:text-secondary-500 font-bold uppercase tracking-wide transition-colors cursor-pointer"
+      >
+        Marketplace
+      </a>
+
+      {/* Role-based main action(s) */}
+      {isAdmin && (
+        <Link
+          to="/dashboard"
+          className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+        >
+          Dashboard
+        </Link>
+      )}
+
+      {isCustomer && !isAdmin && !isSeller && (
+        // Customers: show Dashboard instead of Sell an Item
+        <Link
+          to="/dashboard"
+          className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+        >
+          Dashboard
+        </Link>
+      )}
+
+      {isSeller && (
+        <>
+          <Link
+            to="/dashboard"
+            className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+          >
+            Dashboard
+          </Link>
+
+          <Link
+            to="/sell"
+            className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+          >
+            Sell <span className="max-lg:hidden">an Item</span>
+          </Link>
+
+          <Link
+            to="/productlistings"
+            className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+          >
+            My Listings
+          </Link>
+        </>
+      )}
+
+      {/* Default (not logged-in) show Sell an Item link as before */}
+      {!user && (
+        <Link
+          to="/sell"
+          className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+        >
+          Sell <span className="max-lg:hidden">an Item</span>
+        </Link>
+      )}
+    </div>
+  );
+
+  // User dropdown content (role-aware)
+  const UserMenu = () => {
+    if (!user) return null;
+
+    return (
+      <div className="absolute right-0 mt-2 w-48 bg-surface-elevated text-font-main rounded-lg shadow-xl border border-border py-2 z-50">
+        <Link
+          to="/dashboard"
+          className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+          onClick={() => setIsUserMenuOpen(false)}
+        >
+          Profile
+        </Link>
+
+        {isSeller && (
+          <>
+            <Link
+              to="/sell"
+              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+              onClick={() => setIsUserMenuOpen(false)}
+            >
+              Sell an Item
+            </Link>
+            <Link
+              to="/productlistings"
+              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+              onClick={() => setIsUserMenuOpen(false)}
+            >
+              My Listings
+            </Link>
+          </>
+        )}
+
+        {isCustomer && !isSeller && !isAdmin && (
+          <>
+            <Link
+              to="/dashboard"
+              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+              onClick={() => setIsUserMenuOpen(false)}
+            >
+              My Dashboard
+            </Link>
+            <Link
+              to="/dashboard"
+              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+              onClick={() => setIsUserMenuOpen(false)}
+            >
+              My Bids
+            </Link>
+          </>
+        )}
+
+        {isAdmin && (
+          <Link
+            to="/dashboard"
+            className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+            onClick={() => setIsUserMenuOpen(false)}
+          >
+            Admin Dashboard
+          </Link>
+        )}
+
+        <hr className="my-2 border-border" />
+        <button
+          onClick={handleLogout}
+          className="block w-full text-left px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+        >
+          Logout
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -76,27 +234,7 @@ function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/"
-              className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
-            >
-              Home
-            </Link>
-            <a
-              href="#marketplace"
-              onClick={handleMarketplaceClick}
-              className="text-font-main hover:text-secondary-500 font-bold uppercase tracking-wide transition-colors cursor-pointer"
-            >
-              Marketplace
-            </a>
-            <Link
-              to="/sell"
-              className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
-            >
-              Sell <span className="max-lg:hidden">an Item</span>
-            </Link>
-          </div>
+          <DesktopLinks />
 
           {/* Search Bar */}
           <form
@@ -109,7 +247,7 @@ function Navigation() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by part name, model, or category..."
-                className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 aria-label="Search inventory"
               />
               <button
@@ -138,7 +276,7 @@ function Navigation() {
               )}
             </Link>
 
-            {/* User Section - Login Button or My Account Dropdown */}
+            {/* User Section - Profile (avatar + name) or Login */}
             {loading ? (
               <div className="animate-pulse">
                 <div className="h-8 w-24 bg-surface rounded-lg"></div>
@@ -151,45 +289,20 @@ function Navigation() {
                   className="flex items-center space-x-2 text-font-main hover:text-primary-500 transition-colors"
                   aria-label="User Menu"
                 >
-                  <User size={24} />
-                  <span className="hidden md:block font-bold uppercase tracking-wide">
-                    My Account
+                  {/* Avatar circle with initials */}
+                  <div className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold">
+                    {getInitials(user.name || user.email)}
+                  </div>
+
+                  {/* Show user's name on medium+ screens */}
+                  <span className="hidden md:block font-medium truncate max-w-[120px]">
+                    {user.name || user.email}
                   </span>
+
                   <ChevronDown size={16} />
                 </button>
 
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-surface-elevated text-font-main rounded-lg shadow-xl border border-border py-2 z-50">
-                    <Link
-                      to="/dashboard"
-                      className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      to="/dashboard"
-                      className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      My Listings
-                    </Link>
-                    <Link
-                      to="/dashboard"
-                      className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      My Bids
-                    </Link>
-                    <hr className="my-2 border-border" />
-                    <button 
-                      onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                )}
+                {isUserMenuOpen && <UserMenu />}
               </div>
             ) : (
               // Login Button (when not logged in)
@@ -246,6 +359,7 @@ function Navigation() {
               >
                 Home
               </Link>
+
               <a
                 href="#marketplace"
                 onClick={handleMarketplaceClick}
@@ -253,13 +367,65 @@ function Navigation() {
               >
                 Marketplace
               </a>
-              <Link
-                to="/sell"
-                className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Sell an Item
-              </Link>
+
+              {/* Mobile role-aware actions */}
+              {isAdmin && (
+                <Link
+                  to="/dashboard"
+                  className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              )}
+
+              {isCustomer && !isAdmin && !isSeller && (
+                <Link
+                  to="/dashboard"
+                  className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              )}
+
+              {isSeller && (
+                <>
+                  <Link
+                    to="/dashboard"
+                    className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+
+                  <Link
+                    to="/sell"
+                    className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sell an Item
+                  </Link>
+
+                  <Link
+                    to="/productlistings"
+                    className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    My Listings
+                  </Link>
+                </>
+              )}
+
+              {!user && (
+                <Link
+                  to="/sell"
+                  className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sell an Item
+                </Link>
+              )}
 
               {/* Mobile User Section */}
               {user ? (
@@ -271,20 +437,45 @@ function Navigation() {
                   >
                     Profile
                   </Link>
-                  <Link
-                    to="/dashboard"
-                    className="block py-2 text-font-main hover:text-primary-500 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Listings
-                  </Link>
-                  <Link
-                    to="/dashboard"
-                    className="block py-2 text-font-main hover:text-primary-500 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Bids
-                  </Link>
+
+                  {isSeller && (
+                    <>
+                      <Link
+                        to="/sell"
+                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Sell an Item
+                      </Link>
+                      <Link
+                        to="/productlistings"
+                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        My Listings
+                      </Link>
+                    </>
+                  )}
+
+                  {isCustomer && !isSeller && !isAdmin && (
+                    <>
+                      <Link
+                        to="/dashboard"
+                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        My Listings
+                      </Link>
+                      <Link
+                        to="/dashboard"
+                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        My Bids
+                      </Link>
+                    </>
+                  )}
+
                   <button
                     onClick={() => {
                       handleLogout();

@@ -32,7 +32,6 @@ function UserDashboard() {
           {[
             { key: "bids", label: "My Bids", icon: Hammer },
             { key: "orders", label: "Orders", icon: Package },
-            { key: "listings", label: "My Listings", icon: DollarSign },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}

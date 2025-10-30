@@ -9,12 +9,14 @@ function Dashboard() {
 
   // Determine which dashboard to show based on user role
   const getUserRole = () => {
+    // Check each role explicitly based on user.role only
     if (state.user?.role === "admin") return "admin";
-    if (state.user?.role === "seller" || state.userListings?.length > 0)
-      return "seller";
+    if (state.user?.role === "seller") return "seller";
+    if (state.user?.role === "customer") return "user";
+
+    // Fallback (shouldn't happen if all users have roles)
     return "user";
   };
-
   const role = getUserRole();
 
   return (
