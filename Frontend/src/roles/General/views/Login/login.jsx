@@ -19,20 +19,33 @@ function Login() {
   // Redirect if already logged in
   useAuthRedirect(user);
 
-  // Login hook
   const loginForm = useLoginForm();
-
-  // Signup hook
   const signupForm = useSignupForm();
 
   // Handle login submit
   const handleLoginSubmit = async (e) => {
     try {
       const loggedInUser = await loginForm.handleSubmit(e);
+
+      if (!loggedInUser) {
+        console.error("❌ No user returned from login");
+        return;
+      }
+
+      console.log("🎯 Navigating to dashboard for role:", loggedInUser.role);
+
+      // Navigate with user data
       const dashboardPath = authService.getRoleDashboardPath(loggedInUser.role);
-      navigate(dashboardPath);
+
+      // Use setTimeout to ensure state updates complete
+      setTimeout(() => {
+        navigate(dashboardPath, {
+          replace: true,
+          state: { user: loggedInUser }, // ✅ Pass user in navigation state
+        });
+      }, 100);
     } catch (error) {
-      // Error already handled in hook
+      console.error("❌ Login submit error:", error);
     }
   };
 
@@ -40,30 +53,33 @@ function Login() {
   const handleSignupSubmit = async (e) => {
     try {
       const newUser = await signupForm.handleSubmit(e);
-      const dashboardPath = authService.getRoleDashboardPath(newUser.role);
-      navigate(dashboardPath);
-    } catch (error) {
-      // Error already handled in hook
-    }
-  };
 
-  // Toggle between login/signup
-  const toggleAuthMode = () => {
-    setIsLogin(!isLogin);
-    if (isLogin) {
-      loginForm.resetForm();
-    } else {
-      signupForm.resetForm();
+      if (!newUser) {
+        console.error("❌ No user returned from signup");
+        return;
+      }
+
+      console.log("🎯 Navigating to dashboard for role:", newUser.role);
+
+      const dashboardPath = authService.getRoleDashboardPath(newUser.role);
+
+      // Use setTimeout to ensure state updates complete
+      setTimeout(() => {
+        navigate(dashboardPath, {
+          replace: true,
+          state: { user: newUser }, // ✅ Pass user in navigation state
+        });
+      }, 100);
+    } catch (error) {
+      console.error("❌ Signup submit error:", error);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="max-w-md w-full space-y-8">
-        {/* Header */}
         <AuthHeader isLogin={isLogin} />
 
-        {/* Role Selector - Only for signup */}
         {!isLogin && (
           <RoleSelector
             selectedRole={signupForm.selectedRole}
@@ -71,7 +87,6 @@ function Login() {
           />
         )}
 
-        {/* Auth Type Toggle */}
         <div className="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
           <button
             type="button"
@@ -103,7 +118,6 @@ function Login() {
           </button>
         </div>
 
-        {/* Forms */}
         {isLogin ? (
           <LoginForm
             formData={loginForm.formData}
@@ -123,7 +137,6 @@ function Login() {
           />
         )}
 
-        {/* Role Description - Only for signup */}
         {!isLogin && (
           <div className="text-center bg-gray-800/50 rounded-lg p-4 border border-gray-700">
             <p className="text-gray-400 text-sm">

@@ -6,20 +6,38 @@ import { useAuth } from "../../../../hooks/useAuth";
 
 function Navigation() {
   const { state } = useAppContext();
-  const { signOut, user, loading } = useAuth();
-  console.log("Navigation user:", user);
+  const { signOut, user: authUser, isPending } = useAuth();
+
+  // ✅ Use user from either useAuth or AppContext
+  const user = authUser || state.user;
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [forceUpdate, setForceUpdate] = useState(0); // ✅ Force re-render trigger
+
   const navigate = useNavigate();
   const location = useLocation();
+
+  // ✅ Force re-render when user changes
+  useEffect(() => {
+    console.log("🔄 Navigation - User changed:", user);
+    setForceUpdate((prev) => prev + 1);
+  }, [user, authUser, state.user]);
+
+  // ✅ Close dropdowns when user changes
+  useEffect(() => {
+    if (user) {
+      setIsUserMenuOpen(false);
+      setIsMenuOpen(false);
+    }
+  }, [user]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     console.log("Searching for:", searchQuery);
   };
 
-  // Handle Marketplace click - scroll to section or navigate to homepage first
   const handleMarketplaceClick = (e) => {
     e.preventDefault();
 
@@ -41,7 +59,6 @@ function Navigation() {
     setIsMenuOpen(false);
   };
 
-  // Handle Sell Item click - redirect to login if not logged in
   const handleSellItemClick = (e) => {
     if (!user) {
       e.preventDefault();
@@ -66,6 +83,13 @@ function Navigation() {
   const isSeller = role === "seller";
   const isCustomer = role === "customer";
 
+  console.log("🎭 Navigation - Role detected:", {
+    role,
+    isAdmin,
+    isSeller,
+    isCustomer,
+  });
+
   const getInitials = (name) => {
     if (!name) return "U";
     return name
@@ -76,7 +100,7 @@ function Navigation() {
       .toUpperCase();
   };
 
-  // Desktop links (Home, Marketplace, and role-specific action(s))
+  // Desktop links
   const DesktopLinks = () => (
     <div className="hidden md:flex items-center space-x-8">
       <Link
@@ -86,7 +110,6 @@ function Navigation() {
         Home
       </Link>
 
-      {/* Marketplace - visible to everyone except admin */}
       {!isAdmin && (
         <a
           href="#marketplace"
@@ -97,31 +120,28 @@ function Navigation() {
         </a>
       )}
 
-      {/* ADMIN - Only Dashboard */}
       {isAdmin && (
         <Link
-          to="/dashboard"
+          to="/dashboard/admin"
           className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
         >
           Admin Dashboard
         </Link>
       )}
 
-      {/* CUSTOMER - Only Dashboard */}
       {isCustomer && (
         <Link
-          to="/dashboard"
+          to="/dashboard/user"
           className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
         >
           My Dashboard
         </Link>
       )}
 
-      {/* SELLER - Dashboard, Sell, My Listings */}
       {isSeller && (
         <>
           <Link
-            to="/dashboard"
+            to="/dashboard/seller"
             className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
           >
             Dashboard
@@ -133,12 +153,9 @@ function Navigation() {
           >
             Sell <span className="max-lg:hidden">an Item</span>
           </Link>
-
-         
         </>
       )}
 
-      {/* NOT LOGGED IN - Show Sell an Item (redirects to login) */}
       {!user && (
         <Link
           to="/sell"
@@ -151,13 +168,11 @@ function Navigation() {
     </div>
   );
 
-  // User dropdown content (role-aware)
   const UserMenu = () => {
     if (!user) return null;
 
     return (
       <div className="absolute right-0 mt-2 w-48 bg-surface-elevated text-font-main rounded-lg shadow-xl border border-border py-2 z-50">
-        {/* Profile - visible to all logged-in users */}
         <Link
           to="/profile"
           className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
@@ -166,24 +181,19 @@ function Navigation() {
           Profile
         </Link>
 
-        {/* SELLER ONLY - Sell an Item & My Listings */}
         {isSeller && (
-          <>
-            <Link
-              to="/sell"
-              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-              onClick={() => setIsUserMenuOpen(false)}
-            >
-              Sell an Item
-            </Link>
-            
-          </>
+          <Link
+            to="/sell"
+            className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+            onClick={() => setIsUserMenuOpen(false)}
+          >
+            Sell an Item
+          </Link>
         )}
 
-        {/* CUSTOMER ONLY - My Bids */}
         {isCustomer && (
           <Link
-            to="/dashboard"
+            to="/dashboard/user"
             className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
             onClick={() => setIsUserMenuOpen(false)}
           >
@@ -191,9 +201,14 @@ function Navigation() {
           </Link>
         )}
 
-        {/* Dashboard link for all */}
         <Link
-          to="/dashboard"
+          to={
+            isAdmin
+              ? "/dashboard/admin"
+              : isSeller
+              ? "/dashboard/seller"
+              : "/dashboard/user"
+          }
           className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
           onClick={() => setIsUserMenuOpen(false)}
         >
@@ -215,6 +230,7 @@ function Navigation() {
     <nav
       className="bg-gradient-to-br from-bg to-surface-elevated shadow-lg sticky top-0 z-50"
       role="navigation"
+      key={forceUpdate} // ✅ Force re-render when this changes
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         <div className="flex gap-5 items-center justify-between h-16">
@@ -267,7 +283,7 @@ function Navigation() {
                 aria-label="Cart"
               >
                 <ShoppingCart size={24} />
-                {state.cart.length > 0 && (
+                {state.cart && state.cart.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-tertiary-500 text-bg text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-lg border border-border font-bold">
                     {state.cart.length}
                   </span>
@@ -275,25 +291,22 @@ function Navigation() {
               </Link>
             )}
 
-            {/* User Section - Profile (avatar + name) or Login */}
-            {loading ? (
+            {/* User Section */}
+            {isPending ? (
               <div className="animate-pulse">
                 <div className="h-8 w-24 bg-surface rounded-lg"></div>
               </div>
             ) : user ? (
-              // My Account Dropdown (when logged in)
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-2 text-font-main hover:text-primary-500 transition-colors"
                   aria-label="User Menu"
                 >
-                  {/* Avatar circle with initials */}
                   <div className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold">
                     {getInitials(user.name || user.email)}
                   </div>
 
-                  {/* Show user's name on medium+ screens */}
                   <span className="hidden md:block font-medium truncate max-w-[120px]">
                     {user.name || user.email}
                   </span>
@@ -304,7 +317,6 @@ function Navigation() {
                 {isUserMenuOpen && <UserMenu />}
               </div>
             ) : (
-              // Login Button (when not logged in)
               <button
                 onClick={handleLoginClick}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold uppercase tracking-wide"
@@ -330,7 +342,6 @@ function Navigation() {
       {isMenuOpen && (
         <div className="md:hidden bg-surface-elevated border-t border-border">
           <div className="px-4 py-4 space-y-4">
-            {/* Search - Hidden for Admin */}
             {!isAdmin && (
               <form onSubmit={handleSearch}>
                 <div className="relative">
@@ -362,7 +373,6 @@ function Navigation() {
                 Home
               </Link>
 
-              {/* Marketplace - Hidden for Admin */}
               {!isAdmin && (
                 <a
                   href="#marketplace"
@@ -373,11 +383,9 @@ function Navigation() {
                 </a>
               )}
 
-              {/* Mobile role-aware actions */}
-              {/* ADMIN - Only Dashboard */}
               {isAdmin && (
                 <Link
-                  to="/dashboard"
+                  to="/dashboard/admin"
                   className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -385,10 +393,9 @@ function Navigation() {
                 </Link>
               )}
 
-              {/* CUSTOMER - Only Dashboard */}
               {isCustomer && (
                 <Link
-                  to="/dashboard"
+                  to="/dashboard/user"
                   className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -396,11 +403,10 @@ function Navigation() {
                 </Link>
               )}
 
-              {/* SELLER - Dashboard, Sell, My Listings */}
               {isSeller && (
                 <>
                   <Link
-                    to="/dashboard"
+                    to="/dashboard/seller"
                     className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -414,18 +420,9 @@ function Navigation() {
                   >
                     Sell an Item
                   </Link>
-
-                  <Link
-                    to="/productlistings"
-                    className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Listings
-                  </Link>
                 </>
               )}
 
-              {/* NOT LOGGED IN - Show Sell an Item (redirects to login) */}
               {!user && (
                 <Link
                   to="/sell"
@@ -436,7 +433,6 @@ function Navigation() {
                 </Link>
               )}
 
-              {/* Mobile User Section */}
               {user ? (
                 <div className="pt-4 border-t border-border space-y-2">
                   <Link
@@ -447,30 +443,19 @@ function Navigation() {
                     Profile
                   </Link>
 
-                  {/* SELLER ONLY */}
                   {isSeller && (
-                    <>
-                      <Link
-                        to="/sell"
-                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Sell an Item
-                      </Link>
-                      <Link
-                        to="/productlistings"
-                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        My Listings
-                      </Link>
-                    </>
+                    <Link
+                      to="/sell"
+                      className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sell an Item
+                    </Link>
                   )}
 
-                  {/* CUSTOMER ONLY */}
                   {isCustomer && (
                     <Link
-                      to="/dashboard"
+                      to="/dashboard/user"
                       className="block py-2 text-font-main hover:text-primary-500 transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -479,7 +464,13 @@ function Navigation() {
                   )}
 
                   <Link
-                    to="/dashboard"
+                    to={
+                      isAdmin
+                        ? "/dashboard/admin"
+                        : isSeller
+                        ? "/dashboard/seller"
+                        : "/dashboard/user"
+                    }
                     className="block py-2 text-font-main hover:text-primary-500 transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -491,7 +482,7 @@ function Navigation() {
                       handleLogout();
                       setIsMenuOpen(false);
                     }}
-                    className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                    className="block py-2 text-font-main hover:text-primary-500 transition-colors w-full text-left"
                   >
                     Logout
                   </button>

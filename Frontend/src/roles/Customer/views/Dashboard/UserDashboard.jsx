@@ -9,10 +9,24 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAppContext } from "../../../../config/context/AppContext";
+import { useAuth } from "../../../../hooks/useAuth";
 
 function UserDashboard() {
   const { state } = useAppContext();
+  const { user, isPending } = useAuth();
   const [activeTab, setActiveTab] = useState("bids");
+
+  // ✅ Show loading state
+  if (isPending || (!user && !state.user)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  // ✅ Use user from either source
+  const currentUser = user || state.user;
 
   const formatTimeLeft = (timeLeft) => {
     if (!timeLeft) return "Ended";
@@ -23,7 +37,9 @@ function UserDashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-font-main mb-2">My Dashboard</h1>
-        <p className="text-font-secondary">Welcome back, {state.user.name}</p>
+        <p className="text-font-secondary">
+          Welcome back, {currentUser?.name || "User"}
+        </p>
       </div>
 
       {/* Tab Navigation */}
@@ -57,7 +73,7 @@ function UserDashboard() {
               Active Bids
             </h2>
             <div className="space-y-4">
-              {state.userBids.length > 0 ? (
+              {state.userBids && state.userBids.length > 0 ? (
                 state.userBids.map((bid) => (
                   <div key={bid.id} className="card p-6">
                     <div className="flex items-center justify-between">
@@ -119,7 +135,7 @@ function UserDashboard() {
             Order History
           </h2>
           <div className="card p-6 space-y-4">
-            {state.userOrders?.length > 0 ? (
+            {state.userOrders && state.userOrders.length > 0 ? (
               state.userOrders.map((order) => (
                 <div
                   key={order.id}
@@ -158,7 +174,7 @@ function UserDashboard() {
           </div>
 
           <div className="space-y-4">
-            {state.userListings.length > 0 ? (
+            {state.userListings && state.userListings.length > 0 ? (
               state.userListings.map((listing) => (
                 <div
                   key={listing.id}

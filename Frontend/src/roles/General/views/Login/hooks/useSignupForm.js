@@ -18,7 +18,6 @@ export const useSignupForm = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -27,7 +26,6 @@ export const useSignupForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate
     const validationErrors = validateSignupForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -47,15 +45,15 @@ export const useSignupForm = () => {
         address: formData.address,
       });
 
-      // Refresh session and get user data
+      // ✅ Just refresh session - AppContext will automatically update
       const session = await refreshSession();
       const newUser = session?.data?.user;
 
-      // Update context
-      dispatch({
-        type: "SET_USER",
-        payload: newUser,
-      });
+      // ❌ REMOVE THIS - Don't manually dispatch SET_USER
+      // dispatch({
+      //   type: "SET_USER",
+      //   payload: newUser,
+      // });
 
       // Show success notification
       dispatch({
@@ -66,8 +64,8 @@ export const useSignupForm = () => {
         },
       });
 
-      // Small delay for state propagation
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // ✅ Wait longer for AppContext useEffect to complete
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       return newUser;
     } catch (error) {

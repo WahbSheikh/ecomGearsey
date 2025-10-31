@@ -1,13 +1,23 @@
 import React, { useState } from "react";
 import { DollarSign, TrendingUp, Package, BarChart3 } from "lucide-react";
+import { useAuth } from "../../../../hooks/useAuth";
 import TabNavigation from "../../../General/components/Tabs/TabNavigation";
 import ListingsTab from "./components/ListingsTab";
 import SalesTab from "./components/SalesTab";
 import AnalyticsTab from "./components/AnalyticsTab";
-// import OrdersTab from "./tabs/OrdersTab";
 
 function SellerDashboard() {
+  const { isPending } = useAuth();
   const [activeTab, setActiveTab] = useState("listings");
+
+  // ✅ Show loading state
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   const tabs = [
     { key: "listings", label: "My Listings", icon: DollarSign },
@@ -27,7 +37,6 @@ function SellerDashboard() {
       <div className="mt-8">
         {activeTab === "listings" && <ListingsTab />}
         {activeTab === "sales" && <SalesTab />}
-        {/* {activeTab === "orders" && <OrdersTab />} */}
         {activeTab === "analytics" && <AnalyticsTab />}
       </div>
     </div>

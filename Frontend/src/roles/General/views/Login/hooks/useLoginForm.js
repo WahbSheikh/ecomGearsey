@@ -20,7 +20,6 @@ export const useLoginForm = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -29,7 +28,6 @@ export const useLoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate
     const validationErrors = validateLoginForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -39,33 +37,36 @@ export const useLoginForm = () => {
     setIsLoading(true);
 
     try {
+      console.log("🔐 Starting login...");
+
       // Login
       await authService.login(formData.email, formData.password);
+      console.log("✅ Login API call successful");
 
-      // Refresh session and get user data
+      // Refresh session
       const session = await refreshSession();
       const loggedInUser = session?.data?.user;
 
-      // Update context
-      dispatch({
-        type: "SET_USER",
-        payload: loggedInUser,
-      });
+      console.log("✅ Session refreshed, user:", loggedInUser);
+
+      if (!loggedInUser) {
+        throw new Error("Failed to get user data after login");
+      }
 
       // Show success notification
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {
           type: "success",
-          message: `Welcome back, ${loggedInUser?.name || "User"}!`,
+          message: `Welcome back, ${loggedInUser.name || "User"}!`,
         },
       });
 
-      // Small delay for state propagation
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      console.log("✅ Login complete, returning user");
 
       return loggedInUser;
     } catch (error) {
+      console.error("❌ Login error:", error);
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {
