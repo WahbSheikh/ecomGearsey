@@ -41,6 +41,14 @@ function Navigation() {
     setIsMenuOpen(false);
   };
 
+  // Handle Sell Item click - redirect to login if not logged in
+  const handleSellItemClick = (e) => {
+    if (!user) {
+      e.preventDefault();
+      navigate("/login");
+    }
+  };
+
   const handleLogout = async () => {
     await signOut();
     setIsUserMenuOpen(false);
@@ -54,9 +62,9 @@ function Navigation() {
 
   // Helpers for role-based rendering
   const role = user?.role ?? null;
-  const isAdmin = role === "admin" || user?.isAdmin;
-  const isSeller = role === "seller" || user?.isSeller;
-  const isCustomer = role === "customer" || !role; // fallback to customer
+  const isAdmin = role === "admin";
+  const isSeller = role === "seller";
+  const isCustomer = role === "customer";
 
   const getInitials = (name) => {
     if (!name) return "U";
@@ -78,34 +86,38 @@ function Navigation() {
         Home
       </Link>
 
-      <a
-        href="#marketplace"
-        onClick={handleMarketplaceClick}
-        className="text-font-main hover:text-secondary-500 font-bold uppercase tracking-wide transition-colors cursor-pointer"
-      >
-        Marketplace
-      </a>
+      {/* Marketplace - visible to everyone except admin */}
+      {!isAdmin && (
+        <a
+          href="#marketplace"
+          onClick={handleMarketplaceClick}
+          className="text-font-main hover:text-secondary-500 font-bold uppercase tracking-wide transition-colors cursor-pointer"
+        >
+          Marketplace
+        </a>
+      )}
 
-      {/* Role-based main action(s) */}
+      {/* ADMIN - Only Dashboard */}
       {isAdmin && (
         <Link
           to="/dashboard"
           className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
         >
-          Dashboard
+          Admin Dashboard
         </Link>
       )}
 
-      {isCustomer && !isAdmin && !isSeller && (
-        // Customers: show Dashboard instead of Sell an Item
+      {/* CUSTOMER - Only Dashboard */}
+      {isCustomer && (
         <Link
           to="/dashboard"
           className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
         >
-          Dashboard
+          My Dashboard
         </Link>
       )}
 
+      {/* SELLER - Dashboard, Sell, My Listings */}
       {isSeller && (
         <>
           <Link
@@ -122,19 +134,15 @@ function Navigation() {
             Sell <span className="max-lg:hidden">an Item</span>
           </Link>
 
-          <Link
-            to="/productlistings"
-            className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
-          >
-            My Listings
-          </Link>
+         
         </>
       )}
 
-      {/* Default (not logged-in) show Sell an Item link as before */}
+      {/* NOT LOGGED IN - Show Sell an Item (redirects to login) */}
       {!user && (
         <Link
           to="/sell"
+          onClick={handleSellItemClick}
           className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
         >
           Sell <span className="max-lg:hidden">an Item</span>
@@ -149,14 +157,16 @@ function Navigation() {
 
     return (
       <div className="absolute right-0 mt-2 w-48 bg-surface-elevated text-font-main rounded-lg shadow-xl border border-border py-2 z-50">
+        {/* Profile - visible to all logged-in users */}
         <Link
-          to="/dashboard"
+          to="/profile"
           className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
           onClick={() => setIsUserMenuOpen(false)}
         >
           Profile
         </Link>
 
+        {/* SELLER ONLY - Sell an Item & My Listings */}
         {isSeller && (
           <>
             <Link
@@ -166,44 +176,29 @@ function Navigation() {
             >
               Sell an Item
             </Link>
-            <Link
-              to="/productlistings"
-              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-              onClick={() => setIsUserMenuOpen(false)}
-            >
-              My Listings
-            </Link>
+            
           </>
         )}
 
-        {isCustomer && !isSeller && !isAdmin && (
-          <>
-            <Link
-              to="/dashboard"
-              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-              onClick={() => setIsUserMenuOpen(false)}
-            >
-              My Dashboard
-            </Link>
-            <Link
-              to="/dashboard"
-              className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
-              onClick={() => setIsUserMenuOpen(false)}
-            >
-              My Bids
-            </Link>
-          </>
-        )}
-
-        {isAdmin && (
+        {/* CUSTOMER ONLY - My Bids */}
+        {isCustomer && (
           <Link
             to="/dashboard"
             className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
             onClick={() => setIsUserMenuOpen(false)}
           >
-            Admin Dashboard
+            My Bids
           </Link>
         )}
+
+        {/* Dashboard link for all */}
+        <Link
+          to="/dashboard"
+          className="block px-4 py-2 text-font-main hover:bg-surface font-medium transition-colors"
+          onClick={() => setIsUserMenuOpen(false)}
+        >
+          {isAdmin ? "Admin Dashboard" : "Dashboard"}
+        </Link>
 
         <hr className="my-2 border-border" />
         <button
@@ -236,45 +231,49 @@ function Navigation() {
           {/* Desktop Navigation */}
           <DesktopLinks />
 
-          {/* Search Bar */}
-          <form
-            onSubmit={handleSearch}
-            className="hidden md:flex items-center flex-1 max-w-md mx-8"
-          >
-            <div className="relative w-full">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by part name, model, or category..."
-                className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                aria-label="Search inventory"
-              />
-              <button
-                type="submit"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500 hover:text-secondary-500"
-                aria-label="Search"
-              >
-                <Search size={20} />
-              </button>
-            </div>
-          </form>
+          {/* Search Bar - Hidden for Admin */}
+          {!isAdmin && (
+            <form
+              onSubmit={handleSearch}
+              className="hidden md:flex items-center flex-1 max-w-md mx-8"
+            >
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by part name, model, or category..."
+                  className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  aria-label="Search inventory"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500 hover:text-secondary-500"
+                  aria-label="Search"
+                >
+                  <Search size={20} />
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Right side items */}
           <div className="flex items-center space-x-4">
-            {/* Cart */}
-            <Link
-              to="/cart"
-              className="relative p-2 text-font-main hover:text-tertiary-500 transition-colors"
-              aria-label="Cart"
-            >
-              <ShoppingCart size={24} />
-              {state.cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-tertiary-500 text-bg text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-lg border border-border font-bold">
-                  {state.cart.length}
-                </span>
-              )}
-            </Link>
+            {/* Cart - Hidden for Admin */}
+            {!isAdmin && (
+              <Link
+                to="/cart"
+                className="relative p-2 text-font-main hover:text-tertiary-500 transition-colors"
+                aria-label="Cart"
+              >
+                <ShoppingCart size={24} />
+                {state.cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-tertiary-500 text-bg text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-lg border border-border font-bold">
+                    {state.cart.length}
+                  </span>
+                )}
+              </Link>
+            )}
 
             {/* User Section - Profile (avatar + name) or Login */}
             {loading ? (
@@ -331,25 +330,28 @@ function Navigation() {
       {isMenuOpen && (
         <div className="md:hidden bg-surface-elevated border-t border-border">
           <div className="px-4 py-4 space-y-4">
-            <form onSubmit={handleSearch}>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg"
-                  aria-label="Search inventory"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500 hover:text-secondary-500"
-                  aria-label="Search"
-                >
-                  <Search size={20} />
-                </button>
-              </div>
-            </form>
+            {/* Search - Hidden for Admin */}
+            {!isAdmin && (
+              <form onSubmit={handleSearch}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search..."
+                    className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg"
+                    aria-label="Search inventory"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500 hover:text-secondary-500"
+                    aria-label="Search"
+                  >
+                    <Search size={20} />
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="space-y-2">
               <Link
@@ -360,35 +362,41 @@ function Navigation() {
                 Home
               </Link>
 
-              <a
-                href="#marketplace"
-                onClick={handleMarketplaceClick}
-                className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-secondary-500 transition-colors cursor-pointer"
-              >
-                Marketplace
-              </a>
+              {/* Marketplace - Hidden for Admin */}
+              {!isAdmin && (
+                <a
+                  href="#marketplace"
+                  onClick={handleMarketplaceClick}
+                  className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-secondary-500 transition-colors cursor-pointer"
+                >
+                  Marketplace
+                </a>
+              )}
 
               {/* Mobile role-aware actions */}
+              {/* ADMIN - Only Dashboard */}
               {isAdmin && (
                 <Link
                   to="/dashboard"
                   className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Dashboard
+                  Admin Dashboard
                 </Link>
               )}
 
-              {isCustomer && !isAdmin && !isSeller && (
+              {/* CUSTOMER - Only Dashboard */}
+              {isCustomer && (
                 <Link
                   to="/dashboard"
                   className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Dashboard
+                  My Dashboard
                 </Link>
               )}
 
+              {/* SELLER - Dashboard, Sell, My Listings */}
               {isSeller && (
                 <>
                   <Link
@@ -417,11 +425,12 @@ function Navigation() {
                 </>
               )}
 
+              {/* NOT LOGGED IN - Show Sell an Item (redirects to login) */}
               {!user && (
                 <Link
                   to="/sell"
+                  onClick={handleSellItemClick}
                   className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   Sell an Item
                 </Link>
@@ -431,13 +440,14 @@ function Navigation() {
               {user ? (
                 <div className="pt-4 border-t border-border space-y-2">
                   <Link
-                    to="/dashboard"
+                    to="/profile"
                     className="block py-2 text-font-main hover:text-primary-500 transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Profile
                   </Link>
 
+                  {/* SELLER ONLY */}
                   {isSeller && (
                     <>
                       <Link
@@ -457,24 +467,24 @@ function Navigation() {
                     </>
                   )}
 
-                  {isCustomer && !isSeller && !isAdmin && (
-                    <>
-                      <Link
-                        to="/dashboard"
-                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        My Listings
-                      </Link>
-                      <Link
-                        to="/dashboard"
-                        className="block py-2 text-font-main hover:text-primary-500 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        My Bids
-                      </Link>
-                    </>
+                  {/* CUSTOMER ONLY */}
+                  {isCustomer && (
+                    <Link
+                      to="/dashboard"
+                      className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      My Bids
+                    </Link>
                   )}
+
+                  <Link
+                    to="/dashboard"
+                    className="block py-2 text-font-main hover:text-primary-500 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {isAdmin ? "Admin Dashboard" : "Dashboard"}
+                  </Link>
 
                   <button
                     onClick={() => {

@@ -1,96 +1,103 @@
-import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, User, Mail, Lock, Car, Shield, Store, Users } from 'lucide-react';
-import { useAppContext } from '../../../../config/context/AppContext';
-import { useNavigate } from 'react-router-dom';
-import { authClient } from '../../../../lib/auth';
-import { useAuth } from '../../../../hooks/useAuth';
+import React, { useEffect, useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Lock,
+  Car,
+  Shield,
+  Store,
+  Users,
+} from "lucide-react";
+import { useAppContext } from "../../../../config/context/AppContext";
+import { useNavigate } from "react-router-dom";
+import { authClient } from "../../../../lib/auth";
+import { useAuth } from "../../../../hooks/useAuth";
 
 function Auth() {
   const { dispatch } = useAppContext();
   const navigate = useNavigate();
-  const { refreshSession , user } = useAuth();
+  const { refreshSession, user } = useAuth();
 
   useEffect(() => {
     if (user) {
-      console.log(user);
+      console.log("✅ User logged in:", user);
+      console.log("🔑 User role:", user.role);
     }
-  }, [user ]);
+  }, [user]);
 
-  const [selectedRole, setSelectedRole] = useState('customer');
+  const [selectedRole, setSelectedRole] = useState("customer");
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    name: '',
-    phone: '',
-    address: ''
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
+    phone: "",
+    address: "",
   });
   const [errors, setErrors] = useState({});
 
   // Role configurations
   const roles = [
     {
-      id: 'customer',
-      name: 'Customer',
+      id: "customer",
+      name: "Customer",
       icon: Users,
-      description: 'Browse and buy car parts'
+      description: "Browse and buy car parts",
     },
     {
-      id: 'seller',
-      name: 'Seller',
+      id: "seller",
+      name: "Seller",
       icon: Store,
-      description: 'Sell your car parts'
+      description: "Sell your car parts",
     },
     {
-      id: 'admin',
-      name: 'Admin',
+      id: "admin",
+      name: "Admin",
       icon: Shield,
-      description: 'Manage the platform'
-    }
+      description: "Manage the platform",
+    },
   ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    // Email validation
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = "Email is invalid";
     }
 
-    // Password validation
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = "Password must be at least 6 characters";
     }
 
-    // Sign up specific validations
     if (!isLogin) {
       if (!formData.name) {
-        newErrors.name = 'Name is required';
+        newErrors.name = "Name is required";
       }
       if (!formData.phone) {
-        newErrors.phone = 'Phone number is required';
+        newErrors.phone = "Phone number is required";
       }
       if (!formData.address) {
-        newErrors.address = 'Address is required';
+        newErrors.address = "Address is required";
       }
       if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
+        newErrors.confirmPassword = "Passwords do not match";
       }
     }
 
@@ -98,79 +105,103 @@ function Auth() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Update the handleSubmit function
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
       if (isLogin) {
-        // Login with Better Auth
+        // ===== LOGIN =====
+        console.log("🔐 Attempting login...");
+
         const result = await authClient.signIn.email({
           email: formData.email,
           password: formData.password,
         });
 
-        console.log('Login result:', result); // Debug log
+        console.log("📦 Login result:", result);
 
         if (result.error) {
-          throw new Error(result.error.message || 'Login failed');
+          throw new Error(result.error.message || "Login failed");
         }
 
+        // Refresh session to get the user data with role
+        await refreshSession();
+
+        // Get the fresh session to check user role
+        const session = await authClient.getSession();
+        const loggedInUser = session?.data?.user;
+
+        console.log("✅ Logged in user:", loggedInUser);
+        console.log("🔑 User role:", loggedInUser?.role);
+
         dispatch({
-          type: 'ADD_NOTIFICATION',
+          type: "ADD_NOTIFICATION",
           payload: {
-            type: 'success',
-            message: `Welcome back! Logged in successfully.`
-          }
+            type: "success",
+            message: `Welcome back!`,
+          },
         });
 
-        // Refresh session after successful login
-        await refreshSession();
+        // Navigate based on role
+        if (loggedInUser?.role === "admin") {
+          console.log("🎯 Navigating to admin dashboard");
+          navigate("/dashboard");
+        } else if (loggedInUser?.role === "seller") {
+          console.log("🎯 Navigating to seller dashboard");
+          navigate("/dashboard");
+        } else {
+          console.log("🎯 Navigating to customer dashboard");
+          navigate("/dashboard");
+        }
       } else {
-        // Signup with Better Auth
+        // ===== SIGNUP =====
+        console.log("📝 Attempting signup with role:", selectedRole);
+
         const result = await authClient.signUp.email({
           email: formData.email,
           password: formData.password,
           name: formData.name,
-          // Additional fields that match your Better Auth schema
-          role: selectedRole,
+          role: selectedRole, // This is the important part for signup
           phone: formData.phone,
           address: formData.address,
         });
 
-        console.log('Signup result:', result); // Debug log
+        console.log("📦 Signup result:", result);
 
         if (result.error) {
-          throw new Error(result.error.message || 'Signup failed');
+          throw new Error(result.error.message || "Signup failed");
         }
 
         dispatch({
-          type: 'ADD_NOTIFICATION',
+          type: "ADD_NOTIFICATION",
           payload: {
-            type: 'success',
-            message: `Account created successfully! Welcome to Gearsey as a ${selectedRole}.`
-          }
+            type: "success",
+            message: `Account created successfully as ${selectedRole}!`,
+          },
         });
 
-        // Refresh session after successful signup
+        // Refresh session after signup
         await refreshSession();
-      }
 
-      // Navigate to homepage
-      navigate('/');
-      
+        // Navigate to dashboard
+        navigate("/dashboard");
+      }
     } catch (error) {
-      console.error('Auth error:', error);
+      console.error(". Auth error:", error);
       dispatch({
-        type: 'ADD_NOTIFICATION',
+        type: "ADD_NOTIFICATION",
         payload: {
-          type: 'error',
-          message: error.message || (isLogin ? 'Login failed. Please try again.' : 'Signup failed. Please try again.')
-        }
+          type: "error",
+          message:
+            error.message ||
+            (isLogin
+              ? "Login failed. Please try again."
+              : "Signup failed. Please try again."),
+        },
       });
     } finally {
       setIsLoading(false);
@@ -179,12 +210,12 @@ function Auth() {
 
   const resetForm = () => {
     setFormData({
-      email: '',
-      password: '',
-      confirmPassword: '',
-      name: '',
-      phone: '',
-      address: ''
+      email: "",
+      password: "",
+      confirmPassword: "",
+      name: "",
+      phone: "",
+      address: "",
     });
     setErrors({});
   };
@@ -200,45 +231,46 @@ function Auth() {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-white mb-2">
-            {isLogin ? 'Welcome back' : 'Create your account'}
+            {isLogin ? "Welcome back" : "Create your account"}
           </h2>
           <p className="text-gray-400">
-            {isLogin 
-              ? 'Sign in to your Gearsey account' 
-              : 'Join the ultimate car parts marketplace'
-            }
+            {isLogin
+              ? "Sign in to your Gearsey account"
+              : "Join the ultimate car parts marketplace"}
           </p>
         </div>
 
-        {/* Role Selection Tabs */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 text-center">
-            {isLogin ? 'Login as' : 'Join as'}
-          </h3>
-          <div className="grid grid-cols-3 gap-2">
-            {roles.map((role) => {
-              const IconComponent = role.icon;
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() => setSelectedRole(role.id)}
-                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                    selectedRole === role.id
-                      ? 'border-orange-500 bg-orange-500/10 text-orange-400'
-                      : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-                  }`}
-                >
-                  <IconComponent className="h-6 w-6 mx-auto mb-2" />
-                  <div className="text-xs font-medium">{role.name}</div>
-                </button>
-              );
-            })}
+        {/* Role Selection Tabs - Only show during SIGNUP */}
+        {!isLogin && (
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-white mb-4 text-center">
+              Join as
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              {roles.map((role) => {
+                const IconComponent = role.icon;
+                return (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => setSelectedRole(role.id)}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                      selectedRole === role.id
+                        ? "border-orange-500 bg-orange-500/10 text-orange-400"
+                        : "border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500"
+                    }`}
+                  >
+                    <IconComponent className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-xs font-medium">{role.name}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-400 text-center mt-3">
+              {roles.find((role) => role.id === selectedRole)?.description}
+            </p>
           </div>
-          <p className="text-xs text-gray-400 text-center mt-3">
-            {roles.find(role => role.id === selectedRole)?.description}
-          </p>
-        </div>
+        )}
 
         {/* Authentication Type Toggle */}
         <div className="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
@@ -250,8 +282,8 @@ function Auth() {
             }}
             className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-200 ${
               isLogin
-                ? 'bg-orange-500 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
+                ? "bg-orange-500 text-white shadow-lg"
+                : "text-gray-400 hover:text-white"
             }`}
           >
             Sign In
@@ -264,8 +296,8 @@ function Auth() {
             }}
             className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-200 ${
               !isLogin
-                ? 'bg-orange-500 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
+                ? "bg-orange-500 text-white shadow-lg"
+                : "text-gray-400 hover:text-white"
             }`}
           >
             Sign Up
@@ -280,7 +312,10 @@ function Auth() {
               {!isLogin && (
                 <>
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium text-gray-300 mb-1"
+                    >
                       Full Name
                     </label>
                     <div className="relative">
@@ -292,16 +327,21 @@ function Auth() {
                         value={formData.name}
                         onChange={handleInputChange}
                         className={`w-full pl-10 pr-3 py-2 bg-gray-700 border ${
-                          errors.name ? 'border-red-500' : 'border-gray-600'
+                          errors.name ? "border-red-500" : "border-gray-600"
                         } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                         placeholder="John Doe"
                       />
                     </div>
-                    {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+                    {errors.name && (
+                      <p className="text-red-400 text-xs mt-1">{errors.name}</p>
+                    )}
                   </div>
 
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-300 mb-1">
+                    <label
+                      htmlFor="phone"
+                      className="block text-sm font-medium text-gray-300 mb-1"
+                    >
                       Phone Number
                     </label>
                     <input
@@ -311,15 +351,22 @@ function Auth() {
                       value={formData.phone}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 bg-gray-700 border ${
-                        errors.phone ? 'border-red-500' : 'border-gray-600'
+                        errors.phone ? "border-red-500" : "border-gray-600"
                       } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                       placeholder="+1 (555) 123-4567"
                     />
-                    {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
+                    {errors.phone && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.phone}
+                      </p>
+                    )}
                   </div>
 
                   <div>
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-300 mb-1">
+                    <label
+                      htmlFor="address"
+                      className="block text-sm font-medium text-gray-300 mb-1"
+                    >
                       Address
                     </label>
                     <input
@@ -329,18 +376,25 @@ function Auth() {
                       value={formData.address}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 bg-gray-700 border ${
-                        errors.address ? 'border-red-500' : 'border-gray-600'
+                        errors.address ? "border-red-500" : "border-gray-600"
                       } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                       placeholder="123 Main St, City, State"
                     />
-                    {errors.address && <p className="text-red-400 text-xs mt-1">{errors.address}</p>}
+                    {errors.address && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.address}
+                      </p>
+                    )}
                   </div>
                 </>
               )}
 
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-300 mb-1"
+                >
                   Email Address
                 </label>
                 <div className="relative">
@@ -353,17 +407,22 @@ function Auth() {
                     value={formData.email}
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-3 py-2 bg-gray-700 border ${
-                      errors.email ? 'border-red-500' : 'border-gray-600'
+                      errors.email ? "border-red-500" : "border-gray-600"
                     } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                     placeholder="john@example.com"
                   />
                 </div>
-                {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-red-400 text-xs mt-1">{errors.email}</p>
+                )}
               </div>
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-300 mb-1"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -371,12 +430,12 @@ function Auth() {
                   <input
                     id="password"
                     name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    type={showPassword ? "text" : "password"}
+                    autoComplete={isLogin ? "current-password" : "new-password"}
                     value={formData.password}
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-10 py-2 bg-gray-700 border ${
-                      errors.password ? 'border-red-500' : 'border-gray-600'
+                      errors.password ? "border-red-500" : "border-gray-600"
                     } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                     placeholder="••••••••"
                   />
@@ -385,16 +444,25 @@ function Auth() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
-                {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
+                {errors.password && (
+                  <p className="text-red-400 text-xs mt-1">{errors.password}</p>
+                )}
               </div>
 
               {/* Confirm Password Field (Sign Up Only) */}
               {!isLogin && (
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">
+                  <label
+                    htmlFor="confirmPassword"
+                    className="block text-sm font-medium text-gray-300 mb-1"
+                  >
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -406,12 +474,18 @@ function Auth() {
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                       className={`w-full pl-10 pr-3 py-2 bg-gray-700 border ${
-                        errors.confirmPassword ? 'border-red-500' : 'border-gray-600'
+                        errors.confirmPassword
+                          ? "border-red-500"
+                          : "border-gray-600"
                       } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                       placeholder="••••••••"
                     />
                   </div>
-                  {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
+                  {errors.confirmPassword && (
+                    <p className="text-red-400 text-xs mt-1">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -426,7 +500,10 @@ function Auth() {
                     type="checkbox"
                     className="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-600 bg-gray-700 rounded"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-300"
+                  >
                     Remember me
                   </label>
                 </div>
@@ -448,26 +525,35 @@ function Auth() {
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  {isLogin ? 'Signing in...' : 'Creating account...'}
+                  {isLogin ? "Signing in..." : "Creating account..."}
                 </div>
               ) : (
                 <>
-                  {isLogin ? `Sign In as ${roles.find(r => r.id === selectedRole)?.name}` : `Create ${roles.find(r => r.id === selectedRole)?.name} Account`}
+                  {isLogin
+                    ? "Sign In"
+                    : `Create ${
+                        roles.find((r) => r.id === selectedRole)?.name
+                      } Account`}
                 </>
               )}
             </button>
           </div>
         </form>
 
-        {/* Role Description */}
-        <div className="text-center bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <p className="text-gray-400 text-sm">
-            {isLogin ? 'Signing in' : 'Creating account'} as a <span className="text-orange-400 font-medium">{roles.find(r => r.id === selectedRole)?.name}</span>
-          </p>
-          <p className="text-gray-500 text-xs mt-1">
-            {roles.find(r => r.id === selectedRole)?.description}
-          </p>
-        </div>
+        {/* Role Description - Only for signup */}
+        {!isLogin && (
+          <div className="text-center bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+            <p className="text-gray-400 text-sm">
+              Creating account as a{" "}
+              <span className="text-orange-400 font-medium">
+                {roles.find((r) => r.id === selectedRole)?.name}
+              </span>
+            </p>
+            <p className="text-gray-500 text-xs mt-1">
+              {roles.find((r) => r.id === selectedRole)?.description}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

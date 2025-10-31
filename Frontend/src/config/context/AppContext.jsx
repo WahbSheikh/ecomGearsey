@@ -7,12 +7,14 @@ const AppContext = createContext();
 function appReducer(state, action) {
   switch (action.type) {
     case "SET_USER":
+      console.log("🔵 AppContext Reducer - SET_USER:", action.payload);
       return {
         ...state,
         user: action.payload,
       };
 
     case "LOGOUT":
+      console.log("🔴 AppContext Reducer - LOGOUT");
       return {
         ...state,
         user: null,
@@ -127,20 +129,36 @@ function appReducer(state, action) {
 }
 
 export function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(appReducer, modeldata());
+  // Initialize state with modeldata but ensure user is null
+  const initialState = {
+    ...modeldata(),
+    user: null, // Override any user from modeldata
+  };
+
+  const [state, dispatch] = useReducer(appReducer, initialState);
   const { user, isPending } = useAuth();
 
   // Sync Better Auth user with AppContext
   useEffect(() => {
+    console.log("🟡 AppContext useEffect triggered");
+    console.log("  - isPending:", isPending);
+    console.log("  - Better Auth user:", user);
+    console.log("  - Current state.user:", state.user);
+
     if (!isPending) {
       if (user) {
+        console.log("✅ User is logged in, updating AppContext");
+        console.log("  - User ID:", user.id);
+        console.log("  - User Name:", user.name);
+        console.log("  - User Role:", user.role);
+
         dispatch({
           type: "SET_USER",
           payload: {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role,
+            role: user.role, // This should be "customer", "seller", or "admin"
             phone: user.phone,
             address: user.address,
             rating: user.rating || 0,
@@ -149,10 +167,19 @@ export function AppProvider({ children }) {
           },
         });
       } else {
+        console.log(". No user found, logging out");
         dispatch({ type: "LOGOUT" });
       }
     }
   }, [user, isPending]);
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log("📊 AppContext state changed:", {
+      user: state.user,
+      role: state.user?.role,
+    });
+  }, [state.user]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
