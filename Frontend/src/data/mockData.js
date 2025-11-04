@@ -258,12 +258,19 @@ export const mockAnalyticsData = {
   ],
 };
 
-// Helper function to get current user ID from auth
+// Line 262-269 - Better user ID handling
 export const getCurrentUserId = (user) => {
-  return user?.id || "user1";
+  if (!user || !user.id) {
+    console.warn("⚠️ No user logged in, returning null");
+    return null; // ✅ Return null instead of default "user1"
+  }
+  return user.id;
 };
 
-// Helper function to get current seller ID from auth
 export const getCurrentSellerId = (user) => {
-  return user?.id || "seller1";
+  if (!user || !user.id) {
+    console.warn("⚠️ No user logged in, returning null");
+    return null;
+  }
+  return user.id;
 };

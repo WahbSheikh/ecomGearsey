@@ -24,7 +24,7 @@ function AnalyticsTab() {
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-6">
+        <div className="card p-6 animate-slide-up">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-font-secondary text-sm">Total Auctions</p>
@@ -36,7 +36,7 @@ function AnalyticsTab() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-6 animate-slide-up animate-delay-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-font-secondary text-sm">Total Bids</p>
@@ -48,7 +48,7 @@ function AnalyticsTab() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-6 animate-slide-up animate-delay-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-font-secondary text-sm">Active Auctions</p>
@@ -60,7 +60,7 @@ function AnalyticsTab() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-6 animate-slide-up animate-delay-300">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-font-secondary text-sm">Total Revenue</p>
@@ -75,18 +75,11 @@ function AnalyticsTab() {
 
       {/* Charts with Recharts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-6">
-          <SalesChart data={analytics.salesByMonth} />
-        </div>
-
-        <div className="card p-6">
-          <BidsChart data={analytics.bidsByAuction} />
-        </div>
+        <SalesChart data={analytics.salesByMonth} />
+        <BidsChart data={analytics.bidsByAuction} />
       </div>
 
-      <div className="card p-6">
-        <AuctionStatsChart data={analytics.auctionStatus} />
-      </div>
+      <AuctionStatsChart data={analytics.auctionStatus} />
     </div>
   );
 }

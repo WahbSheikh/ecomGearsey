@@ -50,7 +50,7 @@ const AuctionsTab = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center animate-slide-down">
         <h2 className="text-xl font-semibold text-font-main tracking-wide">
           Manage Auctions
         </h2>
@@ -65,11 +65,11 @@ const AuctionsTab = () => {
         </button>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap animate-slide-down animate-delay-100">
         <button
           className={`px-4 py-2 rounded-lg font-semibold transition-all ${
             filter === "all"
-              ? "bg-primary-500 text-white"
+              ? "bg-primary-500 text-font-main"
               : "bg-surface-elevated border border-border text-font-secondary hover:border-primary-500"
           }`}
           onClick={() => setFilter("all")}
@@ -79,7 +79,7 @@ const AuctionsTab = () => {
         <button
           className={`px-4 py-2 rounded-lg font-semibold transition-all ${
             filter === "Active"
-              ? "bg-primary-500 text-white"
+              ? "bg-primary-500 text-font-main"
               : "bg-surface-elevated border border-border text-font-secondary hover:border-primary-500"
           }`}
           onClick={() => setFilter("Active")}
@@ -89,7 +89,7 @@ const AuctionsTab = () => {
         <button
           className={`px-4 py-2 rounded-lg font-semibold transition-all ${
             filter === "Pending"
-              ? "bg-primary-500 text-white"
+              ? "bg-primary-500 text-font-main"
               : "bg-surface-elevated border border-border text-font-secondary hover:border-primary-500"
           }`}
           onClick={() => setFilter("Pending")}
@@ -99,7 +99,7 @@ const AuctionsTab = () => {
         <button
           className={`px-4 py-2 rounded-lg font-semibold transition-all ${
             filter === "Closed"
-              ? "bg-primary-500 text-white"
+              ? "bg-primary-500 text-font-main"
               : "bg-surface-elevated border border-border text-font-secondary hover:border-primary-500"
           }`}
           onClick={() => setFilter("Closed")}
@@ -109,18 +109,14 @@ const AuctionsTab = () => {
       </div>
 
       {showForm ? (
-        <div className="card p-6">
-          <AuctionForm
-            auction={editingAuction}
-            onSubmit={
-              editingAuction ? handleUpdateAuction : handleCreateAuction
-            }
-            onCancel={() => {
-              setShowForm(false);
-              setEditingAuction(null);
-            }}
-          />
-        </div>
+        <AuctionForm
+          auction={editingAuction}
+          onSubmit={editingAuction ? handleUpdateAuction : handleCreateAuction}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingAuction(null);
+          }}
+        />
       ) : (
         <AuctionList
           auctions={getFilteredAuctions()}

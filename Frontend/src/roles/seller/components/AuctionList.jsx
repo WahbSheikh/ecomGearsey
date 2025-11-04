@@ -11,23 +11,30 @@ const AuctionList = ({
 }) => {
   if (!auctions || auctions.length === 0) {
     return (
-      <div className="empty-state">
-        <p>{emptyMessage}</p>
+      <div className="flex items-center justify-center min-h-[300px] bg-surface rounded-xl border border-border">
+        <p className="text-font-secondary text-lg">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="auction-list">
-      {auctions.map((auction) => (
-        <AuctionCard
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {auctions.map((auction, index) => (
+        <div
           key={auction._id}
-          auction={auction}
-          onBid={onBid}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          isOwner={isOwner}
-        />
+          className={`animate-slide-up animate-delay-${Math.min(
+            index * 100,
+            900
+          )}`}
+        >
+          <AuctionCard
+            auction={auction}
+            onBid={onBid}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            isOwner={isOwner}
+          />
+        </div>
       ))}
     </div>
   );

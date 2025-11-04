@@ -26,24 +26,35 @@ const BidForm = ({ auction, onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="bid-form-overlay">
-      <div className="bid-form">
-        <h2 className="bid-form__title">Place Your Bid</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="card shadow-xl max-w-md w-full p-6 animate-scale-in">
+        <h2 className="text-2xl font-bold text-font-main mb-4">
+          Place Your Bid
+        </h2>
 
-        <div className="bid-form__auction-info">
-          <h3>{auction.title}</h3>
-          <p className="current-price">
+        <div className="bg-surface-elevated rounded-lg p-4 mb-6 border border-border">
+          <h3 className="text-lg font-semibold text-font-main mb-2">
+            {auction.title}
+          </h3>
+          <p className="text-font-secondary mb-2">
             Current Price:{" "}
-            <strong>${auction.current_price.toLocaleString()}</strong>
+            <strong className="text-success-500 text-xl">
+              ${auction.current_price.toLocaleString()}
+            </strong>
           </p>
-          <p className="bid-count">
+          <p className="text-sm text-font-secondary">
             {auction.totalBids} bids from {auction.bidders.length} bidders
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="bidAmount">Your Bid Amount ($) *</label>
+          <div className="mb-6">
+            <label
+              htmlFor="bidAmount"
+              className="block text-sm font-medium text-font-main mb-2"
+            >
+              Your Bid Amount ($) *
+            </label>
             <input
               type="number"
               id="bidAmount"
@@ -53,19 +64,20 @@ const BidForm = ({ auction, onSubmit, onCancel }) => {
               min={minBid}
               step="0.01"
               placeholder={`Minimum: $${minBid}`}
+              className="input-field"
             />
-            {error && <p className="error-message">{error}</p>}
+            {error && <p className="text-error-500 text-sm mt-2">{error}</p>}
           </div>
 
-          <div className="form-actions">
+          <div className="flex gap-3">
             <button
               type="button"
-              className="btn btn--secondary"
+              className="btn-secondary flex-1"
               onClick={onCancel}
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn--primary">
+            <button type="submit" className="btn-primary flex-1">
               Place Bid
             </button>
           </div>

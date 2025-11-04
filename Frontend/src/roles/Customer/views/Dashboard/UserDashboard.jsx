@@ -13,11 +13,11 @@ import { useAuth } from "../../../../hooks/useAuth";
 
 function UserDashboard() {
   const { state } = useAppContext();
-  const { user, isPending } = useAuth();
+  const { user, isPending } = useAuth(); // ✅ Use ONLY useAuth for user state
   const [activeTab, setActiveTab] = useState("bids");
 
   // ✅ Show loading state
-  if (isPending || (!user && !state.user)) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
@@ -25,8 +25,16 @@ function UserDashboard() {
     );
   }
 
-  // ✅ Use user from either source
-  const currentUser = user || state.user;
+  // ✅ Redirect if not logged in (shouldn't happen due to ProtectedRoute)
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-font-secondary">
+          Please log in to view your dashboard.
+        </p>
+      </div>
+    );
+  }
 
   const formatTimeLeft = (timeLeft) => {
     if (!timeLeft) return "Ended";
@@ -38,7 +46,7 @@ function UserDashboard() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-font-main mb-2">My Dashboard</h1>
         <p className="text-font-secondary">
-          Welcome back, {currentUser?.name || "User"}
+          Welcome back, {user.name || user.email}
         </p>
       </div>
 

@@ -16,7 +16,7 @@ function SalesTab() {
     <div className="space-y-6">
       {/* Sales Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-6">
+        <div className="card p-6 animate-slide-up">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-font-secondary text-sm">Total Sales</p>
@@ -28,7 +28,7 @@ function SalesTab() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-6 animate-slide-up animate-delay-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-font-secondary text-sm">Total Revenue</p>
@@ -40,7 +40,7 @@ function SalesTab() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-6 animate-slide-up animate-delay-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-font-secondary text-sm">Avg. Sale Price</p>
@@ -69,7 +69,7 @@ function SalesTab() {
                 ?.map((sale) => (
                   <div
                     key={sale.id}
-                    className="flex items-center justify-between bg-bg rounded-lg p-4"
+                    className="flex items-center justify-between bg-surface-elevated rounded-lg p-4 border border-border"
                   >
                     <div>
                       <h3 className="font-semibold text-font-main">
@@ -86,7 +86,7 @@ function SalesTab() {
                 ))}
             </div>
           ) : (
-            <p className="text-font-secondary italic text-center">
+            <p className="text-font-secondary italic text-center py-8">
               No sales yet
             </p>
           )}

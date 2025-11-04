@@ -26,9 +26,11 @@ const AuctionTimer = ({ endTime }) => {
   }, [endTime]);
 
   return (
-    <div className="auction-timer">
-      <span className="auction-timer__label">Time Remaining:</span>
-      <span className="auction-timer__value">{timeLeft}</span>
+    <div className="flex items-center justify-between bg-surface-elevated border border-primary-500 rounded-lg px-4 py-3 mb-4">
+      <span className="text-sm font-medium text-primary-500">
+        Time Remaining:
+      </span>
+      <span className="text-lg font-bold text-font-main">{timeLeft}</span>
     </div>
   );
 };

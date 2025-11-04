@@ -15,7 +15,7 @@ function ProductGrid() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-amber-50 hover:text-primary-600">
+        <h2 className="text-2xl font-bold text-primary-600 hover:text-primary-600">
           {filteredProducts.length} Items Found
         </h2>
       </div>

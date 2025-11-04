@@ -25,7 +25,7 @@ function appReducer(state, action) {
 
     case "ADD_TO_CART":
       if (state.cart.some((item) => item.id === action.payload.id)) {
-        return state; // already in cart
+        return state;
       }
       return {
         ...state,
@@ -38,37 +38,45 @@ function appReducer(state, action) {
         cart: state.cart.filter((item) => item.id !== action.payload),
       };
 
-    case "PLACE_BID":
+    case "CLEAR_CART":
       return {
         ...state,
-        products: state.products.map((product) =>
-          product.id === action.payload.productId
-            ? {
-                ...product,
-                currentBid: action.payload.amount,
-                bids: [
-                  {
-                    bidder: "You",
-                    amount: action.payload.amount,
-                    time: "Just now",
-                  },
-                  ...product.bids,
-                ],
-              }
-            : product
-        ),
+        cart: [],
+      };
+
+    case "PLACE_BID":
+      const product = state.products?.find(
+        (p) => p.id === action.payload.productId
+      );
+
+      return {
+        ...state,
+        products:
+          state.products?.map((product) =>
+            product.id === action.payload.productId
+              ? {
+                  ...product,
+                  currentBid: action.payload.amount,
+                  bids: [
+                    {
+                      bidder: state.user?.name || "You",
+                      amount: action.payload.amount,
+                      time: new Date().toISOString(),
+                    },
+                    ...(product.bids || []),
+                  ],
+                }
+              : product
+          ) || state.products,
         userBids: [
           ...state.userBids,
           {
             id: action.payload.productId,
-            productTitle: state.products.find(
-              (p) => p.id === action.payload.productId
-            )?.title,
+            productTitle: product?.title,
             currentBid: action.payload.amount,
             status: "leading",
-            timeLeft: state.products.find(
-              (p) => p.id === action.payload.productId
-            )?.timeLeft,
+            timeLeft: product?.timeLeft,
+            timestamp: new Date().toISOString(),
           },
         ],
       };
@@ -78,7 +86,11 @@ function appReducer(state, action) {
         ...state,
         notifications: [
           ...state.notifications,
-          { ...action.payload, id: Date.now() },
+          {
+            ...action.payload,
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+          },
         ],
       };
 
@@ -90,25 +102,36 @@ function appReducer(state, action) {
         ),
       };
 
+    case "CLEAR_ALL_NOTIFICATIONS":
+      return {
+        ...state,
+        notifications: [],
+      };
+
     case "SET_FILTERS":
       return {
         ...state,
         filters: { ...state.filters, ...action.payload },
       };
 
+    case "RESET_FILTERS":
+      return {
+        ...state,
+        filters: modeldata().filters || {},
+      };
+
     case "UPDATE_CART_ITEM":
       return {
         ...state,
-        cart: state.cart.map((item) => {
-          if (item.id === action.payload.productId) {
-            return {
-              ...item,
-              deliveryOption: action.payload.deliveryOption,
-              deliveryFee: action.payload.deliveryFee,
-            };
-          }
-          return item;
-        }),
+        cart: state.cart.map((item) =>
+          item.id === action.payload.productId
+            ? {
+                ...item,
+                deliveryOption: action.payload.deliveryOption,
+                deliveryFee: action.payload.deliveryFee,
+              }
+            : item
+        ),
       };
 
     case "SET_USER_LISTINGS":
@@ -123,16 +146,26 @@ function appReducer(state, action) {
         userBids: action.payload,
       };
 
+    case "UPDATE_PRODUCT":
+      return {
+        ...state,
+        products:
+          state.products?.map((product) =>
+            product.id === action.payload.id
+              ? { ...product, ...action.payload.updates }
+              : product
+          ) || state.products,
+      };
+
     default:
       return state;
   }
 }
 
 export function AppProvider({ children }) {
-  // Initialize state with modeldata but ensure user is null
   const initialState = {
     ...modeldata(),
-    user: null, // Override any user from modeldata
+    user: null,
   };
 
   const [state, dispatch] = useReducer(appReducer, initialState);
@@ -147,39 +180,56 @@ export function AppProvider({ children }) {
 
     if (!isPending) {
       if (user) {
-        console.log("✅ User is logged in, updating AppContext");
-        console.log("  - User ID:", user.id);
-        console.log("  - User Name:", user.name);
-        console.log("  - User Role:", user.role);
+        // Check if user data has actually changed to prevent unnecessary updates
+        const hasUserChanged =
+          !state.user ||
+          state.user.id !== user.id ||
+          state.user.role !== user.role ||
+          state.user.name !== user.name ||
+          state.user.email !== user.email;
 
-        dispatch({
-          type: "SET_USER",
-          payload: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role, // This should be "customer", "seller", or "admin"
-            phone: user.phone,
-            address: user.address,
-            rating: user.rating || 0,
-            total_reviews: user.total_reviews || 0,
-            isLoggedIn: true,
-          },
-        });
-      } else {
-        console.log(". No user found, logging out");
+        if (hasUserChanged) {
+          console.log("✅ User is logged in, updating AppContext");
+          console.log("  - User ID:", user.id);
+          console.log("  - User Name:", user.name);
+          console.log("  - User Role:", user.role);
+
+          dispatch({
+            type: "SET_USER",
+            payload: {
+              id: user.id,
+              name: user.name || "User",
+              email: user.email,
+              role: user.role || "customer",
+              phone: user.phone || null,
+              address: user.address || null,
+              rating: user.rating || 0,
+              total_reviews: user.total_reviews || 0,
+              isLoggedIn: true,
+              avatar: user.image || null,
+            },
+          });
+        }
+      } else if (state.user) {
+        console.log("❌ No user found, logging out");
         dispatch({ type: "LOGOUT" });
       }
     }
-  }, [user, isPending]);
+    // Only depend on user and isPending, not state.user to avoid loops
+  }, [user, isPending]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debug: Log state changes
+  // Debug: Log state changes (only in development)
   useEffect(() => {
-    console.log("📊 AppContext state changed:", {
-      user: state.user,
-      role: state.user?.role,
-    });
-  }, [state.user]);
+    if (process.env.NODE_ENV === "development") {
+      console.log("📊 AppContext state changed:", {
+        user: state.user,
+        role: state.user?.role,
+        cartItems: state.cart?.length,
+        userBids: state.userBids?.length,
+        userListings: state.userListings?.length,
+      });
+    }
+  }, [state.user, state.cart, state.userBids, state.userListings]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

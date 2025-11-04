@@ -45,13 +45,21 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
   };
 
   return (
-    <form className="auction-form" onSubmit={handleSubmit}>
-      <h2 className="auction-form__title">
+    <form
+      className="card shadow-lg p-6 max-w-4xl mx-auto animate-slide-up"
+      onSubmit={handleSubmit}
+    >
+      <h2 className="text-2xl font-bold text-font-main mb-6">
         {auction ? "Edit Auction" : "Create New Auction"}
       </h2>
 
-      <div className="form-group">
-        <label htmlFor="title">Title *</label>
+      <div className="mb-4">
+        <label
+          htmlFor="title"
+          className="block text-sm font-medium text-font-main mb-2"
+        >
+          Title *
+        </label>
         <input
           type="text"
           id="title"
@@ -60,11 +68,17 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
           onChange={handleChange}
           required
           placeholder="Enter auction title"
+          className="input-field"
         />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="description">Description *</label>
+      <div className="mb-4">
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium text-font-main mb-2"
+        >
+          Description *
+        </label>
         <textarea
           id="description"
           name="description"
@@ -73,12 +87,18 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
           required
           rows="4"
           placeholder="Describe the item"
+          className="input-field resize-none"
         />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="partId">Part ID *</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label
+            htmlFor="partId"
+            className="block text-sm font-medium text-font-main mb-2"
+          >
+            Part ID *
+          </label>
           <input
             type="text"
             id="partId"
@@ -87,11 +107,17 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
             onChange={handleChange}
             required
             placeholder="Part identifier"
+            className="input-field"
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="imageUrl">Image URL</label>
+        <div>
+          <label
+            htmlFor="imageUrl"
+            className="block text-sm font-medium text-font-main mb-2"
+          >
+            Image URL
+          </label>
           <input
             type="url"
             id="imageUrl"
@@ -99,13 +125,19 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
             value={formData.imageUrl}
             onChange={handleChange}
             placeholder="https://example.com/image.jpg"
+            className="input-field"
           />
         </div>
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="start_price">Starting Price ($) *</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label
+            htmlFor="start_price"
+            className="block text-sm font-medium text-font-main mb-2"
+          >
+            Starting Price ($) *
+          </label>
           <input
             type="number"
             id="start_price"
@@ -115,11 +147,17 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
             required
             min="0"
             step="0.01"
+            className="input-field"
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="reserve_price">Reserve Price ($)</label>
+        <div>
+          <label
+            htmlFor="reserve_price"
+            className="block text-sm font-medium text-font-main mb-2"
+          >
+            Reserve Price ($)
+          </label>
           <input
             type="number"
             id="reserve_price"
@@ -128,13 +166,19 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
             onChange={handleChange}
             min="0"
             step="0.01"
+            className="input-field"
           />
         </div>
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="start_time">Start Time *</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label
+            htmlFor="start_time"
+            className="block text-sm font-medium text-font-main mb-2"
+          >
+            Start Time *
+          </label>
           <input
             type="datetime-local"
             id="start_time"
@@ -142,11 +186,17 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
             value={formData.start_time}
             onChange={handleChange}
             required
+            className="input-field"
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="end_time">End Time *</label>
+        <div>
+          <label
+            htmlFor="end_time"
+            className="block text-sm font-medium text-font-main mb-2"
+          >
+            End Time *
+          </label>
           <input
             type="datetime-local"
             id="end_time"
@@ -154,15 +204,16 @@ const AuctionForm = ({ auction, onSubmit, onCancel }) => {
             value={formData.end_time}
             onChange={handleChange}
             required
+            className="input-field"
           />
         </div>
       </div>
 
-      <div className="form-actions">
-        <button type="button" className="btn btn--secondary" onClick={onCancel}>
+      <div className="flex gap-4 justify-end">
+        <button type="button" className="btn-secondary" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="btn btn--primary">
+        <button type="submit" className="btn-primary">
           {auction ? "Update Auction" : "Create Auction"}
         </button>
       </div>

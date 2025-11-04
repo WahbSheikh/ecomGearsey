@@ -8,12 +8,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"];
+const COLORS = ["#31C769", "#37CDB2", "#F8BA00", "#E1423E"];
 
 const AuctionStatsChart = ({ data }) => {
   return (
-    <div className="chart-container">
-      <h3 className="chart-title">Auction Status Distribution</h3>
+    <div className="card p-6 animate-scale-in">
+      <h3 className="text-xl font-bold text-font-main mb-4">
+        Auction Status Distribution
+      </h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
@@ -35,8 +37,19 @@ const AuctionStatsChart = ({ data }) => {
               />
             ))}
           </Pie>
-          <Tooltip />
-          <Legend />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "#2F3340",
+              border: "1px solid #495061",
+              borderRadius: "0.5rem",
+              color: "#F4F6FA",
+            }}
+          />
+          <Legend
+            wrapperStyle={{
+              color: "#F4F6FA",
+            }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>

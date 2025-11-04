@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Search, ShoppingCart, User, ChevronDown, Menu, X } from "lucide-react";
 import { useAppContext } from "../../../../config/context/AppContext";
@@ -6,26 +6,32 @@ import { useAuth } from "../../../../hooks/useAuth";
 
 function Navigation() {
   const { state } = useAppContext();
-  const { signOut, user: authUser, isPending } = useAuth();
-
-  // ✅ Use user from either useAuth or AppContext
-  const user = authUser || state.user;
+  const { signOut, user, isPending } = useAuth();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [forceUpdate, setForceUpdate] = useState(0); // ✅ Force re-render trigger
 
   const navigate = useNavigate();
   const location = useLocation();
+  const userMenuRef = useRef(null);
 
-  // ✅ Force re-render when user changes
+  // Close user menu when clicking outside
   useEffect(() => {
-    console.log("🔄 Navigation - User changed:", user);
-    setForceUpdate((prev) => prev + 1);
-  }, [user, authUser, state.user]);
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
 
-  // ✅ Close dropdowns when user changes
+    if (isUserMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isUserMenuOpen]);
+
+  // Close dropdowns when user changes
   useEffect(() => {
     if (user) {
       setIsUserMenuOpen(false);
@@ -82,13 +88,6 @@ function Navigation() {
   const isAdmin = role === "admin";
   const isSeller = role === "seller";
   const isCustomer = role === "customer";
-
-  console.log("🎭 Navigation - Role detected:", {
-    role,
-    isAdmin,
-    isSeller,
-    isCustomer,
-  });
 
   const getInitials = (name) => {
     if (!name) return "U";
@@ -230,7 +229,6 @@ function Navigation() {
     <nav
       className="bg-gradient-to-br from-bg to-surface-elevated shadow-lg sticky top-0 z-50"
       role="navigation"
-      key={forceUpdate} // ✅ Force re-render when this changes
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         <div className="flex gap-5 items-center justify-between h-16">
@@ -297,7 +295,7 @@ function Navigation() {
                 <div className="h-8 w-24 bg-surface rounded-lg"></div>
               </div>
             ) : user ? (
-              <div className="relative">
+              <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-2 text-font-main hover:text-primary-500 transition-colors"
@@ -319,7 +317,7 @@ function Navigation() {
             ) : (
               <button
                 onClick={handleLoginClick}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold uppercase tracking-wide"
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold shadow-lg"
               >
                 <User size={16} />
                 <span className="hidden md:block">Login</span>
@@ -494,7 +492,7 @@ function Navigation() {
                       handleLoginClick();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold uppercase tracking-wide"
+                    className="w-full py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold shadow-lg"
                   >
                     Login
                   </button>

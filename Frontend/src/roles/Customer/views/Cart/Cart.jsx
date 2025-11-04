@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Trash2, ShoppingCart, ArrowLeft } from "lucide-react";
 import { useAppContext } from "../../../../config/context/AppContext";
 
-
 // Predefined delivery options with fees
 const DELIVERY_OPTIONS = [
   { label: "Standard (3-5 days)", value: "standard", fee: 0 },
@@ -54,7 +53,7 @@ function Cart() {
   if (state.cart.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center">
+        <div className="text-center animate-fade-in">
           <ShoppingCart className="mx-auto text-border" size={64} />
           <h2 className="text-2xl font-bold text-font-main mt-4">
             Your cart is empty
@@ -62,7 +61,7 @@ function Cart() {
           <p className="text-font-secondary mt-2 mb-6">
             Start shopping to add items to your cart
           </p>
-          <Link to="/" className="btn-primary">
+          <Link to="/" className="btn-primary inline-block">
             Continue Shopping
           </Link>
         </div>
@@ -72,10 +71,10 @@ function Cart() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-4 mb-8 animate-slide-down">
         <Link
           to="/"
-          className="flex items-center gap-2 text-font-secondary hover:text-primary transition-colors"
+          className="flex items-center gap-2 text-font-secondary hover:text-primary-500 transition-colors"
         >
           <ArrowLeft size={20} />
           Continue Shopping
@@ -86,10 +85,13 @@ function Cart() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-6">
-          {state.cart.map((item) => (
+          {state.cart.map((item, index) => (
             <div
               key={item.id}
-              className="card p-6 bg-surface rounded-xl shadow-md border border-border"
+              className={`card p-6 animate-slide-up animate-delay-${Math.min(
+                index * 100,
+                900
+              )}`}
             >
               <div className="flex gap-4 items-center">
                 <img
@@ -102,15 +104,17 @@ function Cart() {
                   className="w-24 h-24 object-cover rounded-lg"
                 />
                 <div className="flex-1">
-                  <h3 className="font-semibold text-font-main">{item.title}</h3>
+                  <h3 className="font-semibold text-font-main text-lg">
+                    {item.title}
+                  </h3>
                   <p className="text-font-secondary text-sm">
                     Condition: {item.condition}
                   </p>
-                  <p className="text-font-secondary text-sm mb-2">
+                  <p className="text-font-secondary text-sm mb-3">
                     Seller: {item.seller}
                   </p>
 
-                  <label className="block text-font-secondary text-sm mb-1">
+                  <label className="block text-font-secondary text-sm mb-1 font-medium">
                     Select Delivery Option:
                   </label>
                   <select
@@ -123,22 +127,31 @@ function Cart() {
                     {DELIVERY_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
-                        {option.fee > 0 ? ` (+$${option.fee})` : ""}
+                        {option.fee > 0 ? ` (+$${option.fee})` : " (Free)"}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-primary mb-4">
-                    ${getItemPrice(item).toFixed(2)}
-                  </p>
+                <div className="text-right flex flex-col items-end gap-4">
+                  <div>
+                    <p className="text-sm text-font-secondary mb-1">Price:</p>
+                    <p className="text-2xl font-bold text-primary-500">
+                      ${getItemPrice(item).toFixed(2)}
+                    </p>
+                    {item.deliveryFee > 0 && (
+                      <p className="text-xs text-font-secondary">
+                        (incl. ${item.deliveryFee} delivery)
+                      </p>
+                    )}
+                  </div>
                   <button
                     onClick={() => removeFromCart(item.id)}
-                    className="text-error hover:text-error-dark transition-colors"
+                    className="flex items-center gap-2 text-error-500 hover:text-red-700 transition-colors px-3 py-2 rounded-lg hover:bg-surface-elevated"
                     aria-label={`Remove ${item.title} from cart`}
                   >
-                    <Trash2 size={20} />
+                    <Trash2 size={18} />
+                    <span className="text-sm font-medium">Remove</span>
                   </button>
                 </div>
               </div>
@@ -148,7 +161,7 @@ function Cart() {
 
         {/* Order Summary */}
         <div className="lg:col-span-1">
-          <div className="card p-6 bg-surface rounded-xl shadow-md border border-border sticky top-8">
+          <div className="card p-6 sticky top-8 animate-slide-up animate-delay-200">
             <h3 className="text-xl font-semibold text-font-main mb-6">
               Order Summary
             </h3>
@@ -157,16 +170,26 @@ function Cart() {
                 <span className="text-font-secondary">
                   Items ({state.cart.length})
                 </span>
-                <span className="font-semibold">${total.toFixed(2)}</span>
+                <span className="font-semibold text-font-main">
+                  $
+                  {state.cart
+                    .reduce((sum, item) => sum + item.price, 0)
+                    .toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-font-secondary">Shipping</span>
-                <span className="font-semibold">Varies by selection</span>
+                <span className="text-font-secondary">Delivery Fees</span>
+                <span className="font-semibold text-font-main">
+                  $
+                  {state.cart
+                    .reduce((sum, item) => sum + (item.deliveryFee || 0), 0)
+                    .toFixed(2)}
+                </span>
               </div>
               <hr className="border-border" />
               <div className="flex justify-between text-lg">
-                <span className="font-semibold">Total</span>
-                <span className="font-bold text-primary">
+                <span className="font-bold text-font-main">Total</span>
+                <span className="font-bold text-primary-500 text-xl">
                   ${total.toFixed(2)}
                 </span>
               </div>
