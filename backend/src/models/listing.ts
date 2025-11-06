@@ -5,7 +5,7 @@ export interface IListing {
   name: string;
   description: string;
   price: number;
-  imageId: ObjectId;
+  imageId: ObjectId | string; // Allow both ObjectId and string for temporary URL handling
   sellerId: ObjectId;
   categoryId: ObjectId;
   condition: "New" | "Used" | "Refurbished";
@@ -17,7 +17,7 @@ const ListingSchema = new Schema<IListing>({
   name: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
-  imageId: { type: Schema.Types.ObjectId, required: true, unique: true},
+  imageId: { type: Schema.Types.Mixed, required: true }, // Changed to Mixed to handle URLs temporarily
   sellerId: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
   categoryId: { type: Schema.Types.ObjectId, required: true, ref: 'Category' },
   condition: {

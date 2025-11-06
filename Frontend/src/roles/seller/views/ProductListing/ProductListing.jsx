@@ -1,49 +1,158 @@
-import React, { useState } from "react";
-import { Upload, DollarSign, Hammer } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Upload, DollarSign } from "lucide-react";
 import { useAppContext } from "../../../../config/context/AppContext";
+import { productListingAPI } from "../../../../apis/productListing";
 
 function SellItem() {
-  const { dispatch } = useAppContext();
+  const { dispatch, state } = useAppContext();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    condition: "used",
-    category: "engines",
-    sellingMode: "fixed",
+    condition: "Used",
+    category: "",
     price: "",
-    startingPrice: "",
-    auctionEndDate: "",
-    auctionEndTime: "",
+    image: null,
   });
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await productListingAPI.getCategories();
+        setCategories(response.categories || []);
+        
+        // Set default category if categories are available
+        if (response.categories && response.categories.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            category: response.categories[0].name
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        dispatch({
+          type: "ADD_NOTIFICATION",
+          payload: {
+            type: "error",
+            message: "Failed to load categories. Please refresh the page.",
+          },
+        });
+        // Fallback categories if API fails
+        setCategories([
+          { name: "engines", description: "Car Engines" },
+          { name: "body", description: "Body Parts" },
+          { name: "wheels", description: "Wheels & Tires" },
+          { name: "accessories", description: "Accessories" }
+        ]);
+        setFormData(prev => ({ ...prev, category: "engines" }));
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [dispatch]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    const { name, value, type, files } = e.target;
+    
+    if (type === 'file') {
+      const file = files[0];
+      if (file) {
+        setFormData((prev) => ({
+          ...prev,
+          image: file,
+        }));
+        
+        // Create preview URL
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch({
-      type: "ADD_NOTIFICATION",
-      payload: {
-        type: "success",
-        message: "Your listing has been created successfully!",
-      },
-    });
-    setFormData({
-      title: "",
-      description: "",
-      condition: "used",
-      category: "engines",
-      sellingMode: "fixed",
-      price: "",
-      startingPrice: "",
-      auctionEndDate: "",
-      auctionEndTime: "",
-    });
+    
+    if (!state.user?.id) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "You must be logged in to create a listing.",
+        },
+      });
+      return;
+    }
+
+    if (!formData.image) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "Please select an image for your product.",
+        },
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create FormData object for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('sellerId', state.user.id);
+      formDataToSend.append('is_auction', 'false');
+      formDataToSend.append('condition', formData.condition);
+      formDataToSend.append('image', formData.image);
+
+      const response = await productListingAPI.createProductWithImage(formDataToSend);
+      
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "success",
+          message: "Your listing has been created successfully!",
+        },
+      });
+
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        condition: "Used",
+        category: categories.length > 0 ? categories[0].name : "engines",
+        price: "",
+        image: null,
+      });
+      setImagePreview(null);
+    } catch (error) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: `Failed to create listing: ${error.message}`,
+        },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -110,9 +219,9 @@ function SellItem() {
                     className="w-full bg-surface-elevated border border-border rounded-lg px-4 py-3 text-font-main focus:border-primary-500 focus:ring-2 focus:ring-primary-500/70 transition-all"
                     required
                   >
-                    <option value="new">New</option>
-                    <option value="used">Used</option>
-                    <option value="vintage">Vintage</option>
+                    <option value="New">New</option>
+                    <option value="Used">Used</option>
+                    <option value="Refurbished">Refurbished</option>
                   </select>
                 </div>
                 <div>
@@ -125,125 +234,27 @@ function SellItem() {
                     onChange={handleInputChange}
                     className="w-full bg-surface-elevated border border-border rounded-lg px-4 py-3 text-font-main focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/70 transition-all"
                     required
+                    disabled={loadingCategories}
                   >
-                    <option value="engines">Engines</option>
-                    <option value="body">Body</option>
-                    <option value="wheels">Wheels</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="vintage">Vintage</option>
+                    {loadingCategories ? (
+                      <option value="">Loading categories...</option>
+                    ) : categories.length > 0 ? (
+                      categories.map((cat) => (
+                        <option key={cat._id || cat.name} value={cat.name}>
+                          {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="engines">Engines</option>
+                        <option value="body">Body</option>
+                        <option value="wheels">Wheels</option>
+                        <option value="accessories">Accessories</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Animated Dropzone for Photos */}
-        <div className="rounded-2xl p-1 bg-gradient-to-r from-tertiary-500 via-primary-500 to-secondary-500 shadow-xl shadow-border/40">
-          <div className="bg-surface rounded-[inherit] p-6 lg:p-8 flex flex-col items-center text-center">
-            <div className="flex items-center mb-4">
-              <span className="inline-block w-2 h-8 bg-tertiary-500 rounded-r-xl mr-3" />
-              <h2 className="text-2xl font-black text-tertiary-500 drop-shadow-sm">
-                Photos
-              </h2>
-            </div>
-            <div className="w-full border-2 border-dashed border-tertiary-500 bg-surface-elevated/60 rounded-xl p-8 flex flex-col items-center justify-center transition-all hover:border-primary-500 group backdrop-blur">
-              <Upload
-                size={42}
-                className="mb-2 animate-bounce text-tertiary-500 group-hover:text-primary-500"
-              />
-              <p className="text-font-main font-semibold mb-1">
-                Drop photos here or click to browse
-              </p>
-              <p className="text-sm text-font-secondary">
-                Upload up to 10 photos (JPG, PNG, WebP)
-              </p>
-              <button
-                type="button"
-                className="btn-secondary mt-4 animate-pulse-slow font-bold"
-              >
-                Choose Files
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Selling Options Section */}
-        <div className="rounded-2xl p-1 bg-gradient-to-r from-secondary-500 via-primary-500 to-tertiary-500 shadow-xl shadow-border/40">
-          <div className="bg-surface rounded-[inherit] p-6 lg:p-8">
-            <div className="flex items-center mb-4">
-              <span className="inline-block w-2 h-8 bg-secondary-500 rounded-r-xl mr-3" />
-              <h2 className="text-2xl font-black text-primary-500 drop-shadow-sm">
-                Selling Mode
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              <label
-                className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 shadow-sm ${
-                  formData.sellingMode === "fixed"
-                    ? "border-primary-500 bg-surface-elevated/90 ring-4 ring-primary-500/10 backdrop-blur-sm scale-105"
-                    : "border-border hover:border-primary-500 hover:scale-105"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="sellingMode"
-                  value="fixed"
-                  checked={formData.sellingMode === "fixed"}
-                  onChange={handleInputChange}
-                  className="sr-only accent-primary-500"
-                />
-                <DollarSign
-                  size={28}
-                  className={`mr-4 ${
-                    formData.sellingMode === "fixed"
-                      ? "text-primary-500 animate-bounce"
-                      : "text-font-secondary"
-                  }`}
-                />
-                <div>
-                  <p className="font-extrabold text-font-main text-lg">
-                    Fixed Price
-                  </p>
-                  <p className="text-font-secondary text-sm">
-                    Sell at a set price
-                  </p>
-                </div>
-              </label>
-              <label
-                className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 shadow-sm ${
-                  formData.sellingMode === "auction"
-                    ? "border-secondary-500 bg-surface-elevated/90 ring-4 ring-secondary-500/10 backdrop-blur-sm scale-105"
-                    : "border-border hover:border-secondary-500 hover:scale-105"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="sellingMode"
-                  value="auction"
-                  checked={formData.sellingMode === "auction"}
-                  onChange={handleInputChange}
-                  className="sr-only accent-secondary-500"
-                />
-                <Hammer
-                  size={28}
-                  className={`mr-4 ${
-                    formData.sellingMode === "auction"
-                      ? "text-secondary-500 animate-bounce"
-                      : "text-font-secondary"
-                  }`}
-                />
-                <div>
-                  <p className="font-extrabold text-font-main text-lg">
-                    Auction
-                  </p>
-                  <p className="text-font-secondary text-sm">
-                    Let buyers bid for it
-                  </p>
-                </div>
-              </label>
-            </div>
-            {formData.sellingMode === "fixed" ? (
               <div>
                 <label className="block uppercase tracking-wide text-xs font-bold text-font-secondary mb-2">
                   Price ($) *
@@ -260,54 +271,58 @@ function SellItem() {
                   required
                 />
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="block uppercase tracking-wide text-xs font-bold text-font-secondary mb-2">
-                    Starting Price ($) *
-                  </label>
-                  <input
-                    type="number"
-                    name="startingPrice"
-                    value={formData.startingPrice}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="w-full bg-surface-elevated border border-border rounded-lg px-4 py-3 text-font-main focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/70 transition-all max-w-[300px]"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block uppercase tracking-wide text-xs font-bold text-font-secondary mb-2">
-                      Auction End Date *
-                    </label>
-                    <input
-                      type="date"
-                      name="auctionEndDate"
-                      value={formData.auctionEndDate}
-                      onChange={handleInputChange}
-                      className="w-full bg-surface-elevated border border-border rounded-lg px-4 py-3 text-font-main focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/70 transition-all"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block uppercase tracking-wide text-xs font-bold text-font-secondary mb-2">
-                      Auction End Time *
-                    </label>
-                    <input
-                      type="time"
-                      name="auctionEndTime"
-                      value={formData.auctionEndTime}
-                      onChange={handleInputChange}
-                      className="w-full bg-surface-elevated border border-border rounded-lg px-4 py-3 text-font-main focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/70 transition-all"
-                      required
-                    />
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Photo Upload Section */}
+        <div className="rounded-2xl p-1 bg-gradient-to-r from-tertiary-500 via-primary-500 to-secondary-500 shadow-xl shadow-border/40">
+          <div className="bg-surface rounded-[inherit] p-6 lg:p-8">
+            <div className="flex items-center mb-4">
+              <span className="inline-block w-2 h-8 bg-tertiary-500 rounded-r-xl mr-3" />
+              <h2 className="text-2xl font-black text-tertiary-500 drop-shadow-sm">
+                Product Photo *
+              </h2>
+            </div>
+            
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="mb-6">
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="w-full max-w-md h-64 object-cover rounded-lg border-2 border-tertiary-500 mx-auto"
+                />
               </div>
             )}
+            
+            {/* File Input */}
+            <div className="w-full">
+              <input
+                type="file"
+                name="image"
+                accept="image/*"
+                onChange={handleInputChange}
+                className="hidden"
+                id="image-upload"
+                required
+              />
+              <label
+                htmlFor="image-upload"
+                className="w-full border-2 border-dashed border-tertiary-500 bg-surface-elevated/60 rounded-xl p-8 flex flex-col items-center justify-center transition-all hover:border-primary-500 group backdrop-blur cursor-pointer"
+              >
+                <Upload
+                  size={42}
+                  className="mb-2 animate-bounce text-tertiary-500 group-hover:text-primary-500"
+                />
+                <p className="text-font-main font-semibold mb-1">
+                  {formData.image ? formData.image.name : "Click to upload a photo"}
+                </p>
+                <p className="text-sm text-font-secondary">
+                  Supports JPG, PNG, WebP (Max 5MB)
+                </p>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -315,9 +330,10 @@ function SellItem() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="px-12 py-4 rounded-xl bg-gradient-to-r from-primary-500 via-secondary-500 to-tertiary-500 text-bg font-bold text-xl shadow-lg hover:from-secondary-500 hover:to-primary-500 transition-transform duration-150 hover:scale-105 focus:ring-4 focus:ring-secondary-500/30 animate-pulse-slow"
+            disabled={isSubmitting}
+            className="px-12 py-4 rounded-xl bg-gradient-to-r from-primary-500 via-secondary-500 to-tertiary-500 text-bg font-bold text-xl shadow-lg hover:from-secondary-500 hover:to-primary-500 transition-transform duration-150 hover:scale-105 focus:ring-4 focus:ring-secondary-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            Create Listing
+            {isSubmitting ? "Creating Listing..." : "Create Listing"}
           </button>
         </div>
       </form>

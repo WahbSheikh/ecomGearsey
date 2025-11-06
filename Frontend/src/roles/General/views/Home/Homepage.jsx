@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Hero from "../../components/Hero/Hero";
 import Footer from "../../components/Footer/Footer";
@@ -6,19 +6,60 @@ import ProductCard from "../../components/ProductCard/ProductCard";
 import Newsletter from "../../components/NewsLetter/Newsletter";
 import WhyChooseUs from "../../components/WhyChooseUs/WhyChooseUs";
 import { useAppContext } from "../../../../config/context/AppContext";
+import { productListingAPI } from "../../../../apis/productListing";
 
 function Homepage() {
   const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter products for different sections
-  const alllProducts = state.products.slice(0, 8); // First 8 as featured
-  const featuredProducts = alllProducts.filter(
+  // Fetch products from API on component mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await productListingAPI.getProducts({ limit: 8 });
+        const products = response.products || [];
+        
+        // Transform API products to match component expectations
+        const transformedProducts = products.map(product => ({
+          id: product._id,
+          title: product.title || product.name,
+          description: product.description,
+          price: product.price,
+          image: product.imageUrl || product.imageId,
+          category: product.categoryId?.name || 'Unknown',
+          type: product.is_auction ? 'auction' : 'fixed',
+          condition: product.condition,
+          seller: 'Seller', // You may want to populate seller info
+          timeLeft: product.is_auction ? { hours: 2, minutes: 30 } : null, // Mock time for auctions
+        }));
+        
+        setFeaturedProducts(transformedProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        dispatch({
+          type: "ADD_NOTIFICATION",
+          payload: {
+            type: "error",
+            message: "Failed to load products. Showing sample data.",
+          },
+        });
+        // Fallback to dummy data if API fails
+        setFeaturedProducts(state.products?.slice(0, 8) || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [dispatch, state.products]);
+
+  // Filter products for different sections - now using real data
+  const fixedPriceProducts = featuredProducts.filter(
     (product) => product.type === "fixed"
   );
-
-
-  const auctionProducts = state.products.filter(
+  const auctionProducts = featuredProducts.filter(
     (product) => product.type === "auction"
   );
 
@@ -93,47 +134,98 @@ function Homepage() {
         className="relative bg-gradient-to-b from-surface/30 to-bg scroll-mt-20"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-font-main mb-2">
-              Featured Items
-            </h2>
-            <p className="text-font-secondary">
-              Handpicked vintage treasures and rare finds
-            </p>
+          <div className="mb-8 flex justify-between items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-font-main mb-2">
+                Featured Items
+              </h2>
+              <p className="text-font-secondary">
+                Latest car parts and components
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="btn-primary"
+            >
+              View All
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Auction Items Section */}
-      <div className="relative bg-gradient-to-b from-bg to-surface/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-font-main mb-2">
-              Live Auctions
-            </h2>
-            <p className="text-font-secondary">Bid on rare items ending soon</p>
-          </div>
-
-          {auctionProducts.length > 0 ? (
+          {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {auctionProducts.map((product) => (
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="bg-surface rounded-lg p-6 animate-pulse">
+                  <div className="bg-border rounded-lg h-48 mb-4"></div>
+                  <div className="bg-border h-4 rounded mb-2"></div>
+                  <div className="bg-border h-4 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : fixedPriceProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {fixedPriceProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="text-6xl mb-4">🔨</div>
+              <div className="text-6xl mb-4">📦</div>
               <h3 className="text-xl font-semibold text-font-main mb-2">
-                No Active Auctions
+                No Products Available
               </h3>
               <p className="text-font-secondary">
-                Check back soon for new auction items!
+                Be the first to list a product!
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Auction Items Section - Hide this since we removed auction functionality */}
+      {/* Note: Since auction is set to false, this section won't show auction items */}
+
+      {/* Recent Listings Section */}
+      <div className="relative bg-gradient-to-b from-bg to-surface/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="mb-8 flex justify-between items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-font-main mb-2">
+                Recent Listings
+              </h2>
+              <p className="text-font-secondary">Newest car parts added to our marketplace</p>
+            </div>
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="btn-secondary"
+            >
+              Browse All
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="bg-surface rounded-lg p-6 animate-pulse">
+                  <div className="bg-border rounded-lg h-48 mb-4"></div>
+                  <div className="bg-border h-4 rounded mb-2"></div>
+                  <div className="bg-border h-4 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : featuredProducts.length > 4 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {featuredProducts.slice(4).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">�</div>
+              <h3 className="text-xl font-semibold text-font-main mb-2">
+                More Products Coming Soon
+              </h3>
+              <p className="text-font-secondary">
+                Check back later for more listings!
               </p>
             </div>
           )}

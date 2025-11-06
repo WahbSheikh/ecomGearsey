@@ -7,14 +7,19 @@ import {
   Edit,
   MoreHorizontal,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../../../config/context/AppContext";
 import { useAuth } from "../../../../hooks/useAuth";
 
 function UserDashboard() {
   const { state } = useAppContext();
   const { user, isPending } = useAuth(); // ✅ Use ONLY useAuth for user state
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("bids");
+
+  const handleCreateListing = () => {
+    navigate("/sell");
+  };
 
   // ✅ Show loading state
   if (isPending) {
@@ -178,7 +183,9 @@ function UserDashboard() {
             <h2 className="text-xl font-semibold text-font-main tracking-wide">
               My Listings
             </h2>
-            <button className="btn-primary">Create New Listing</button>
+            <button className="btn-primary" onClick={handleCreateListing}>
+              Create New Listing
+            </button>
           </div>
 
           <div className="space-y-4">
