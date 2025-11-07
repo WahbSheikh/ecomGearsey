@@ -73,7 +73,7 @@ function Newsletter() {
   };
 
   return (
-    <section className="relative py-10 bg-surface overflow-hidden">
+    <section id="news" className="relative py-10 bg-surface overflow-hidden">
       {/* Background decorative elements */}
       <div
         className="absolute inset-0 opacity-[0.02]"
