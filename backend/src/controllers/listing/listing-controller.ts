@@ -7,7 +7,8 @@ import { deleteImage } from "@/lib/cloudinary.js";
 // Returns all products, with optional category, sellerId filter and limit
 export async function getProducts(req: Request, res: Response) {
   try {
-    const { limit, category, sellerId, query } = req.query;
+    
+    const { limit, category, sellerId, query, minPrice, maxPrice, isAuction } = req.query;
     const filter: Record<string, unknown> = {};
 
     if (sellerId) {
@@ -26,10 +27,31 @@ export async function getProducts(req: Request, res: Response) {
       filter.categoryId = categoryDoc._id;
     }
 
+    // Price range filtering
+    if (minPrice || maxPrice) {
+      const priceFilter: any = {};
+      if (minPrice) {
+        priceFilter.$gte = Number(minPrice);
+      }
+      if (maxPrice) {
+        priceFilter.$lte = Number(maxPrice);
+      }
+      filter.price = priceFilter;
+    }
+
+    // Auction/Fixed price filtering
+    if (isAuction !== undefined) {
+      const auctionValue = isAuction === 'true';
+      filter.is_auction = auctionValue;
+    }
+
+
     const products = await Listing.find(filter)
       .limit(Number(limit) || 25)
       .populate("categoryId", ["name", "description"])
+      .sort({ createdAt: -1 }) // Sort by newest first
       .exec();
+
 
     // Transform products to match frontend expectations
     const transformedProducts = products.map(product => ({

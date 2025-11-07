@@ -62,8 +62,10 @@ function ModelData() {
     userListings: [],
     filters: {
       show: "all",
-      category: "all",
+      category: "all", 
       sortBy: "latest",
+      priceMin: null,
+      priceMax: null,
     },
   };
   return initialState;

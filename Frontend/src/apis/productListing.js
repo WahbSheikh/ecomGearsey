@@ -10,8 +10,13 @@ export const productListingAPI = {
       if (filters.category) queryParams.append('category', filters.category);
       if (filters.sellerId) queryParams.append('sellerId', filters.sellerId);
       if (filters.query) queryParams.append('query', filters.query);
+      if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
+      if (filters.isAuction !== undefined) queryParams.append('isAuction', filters.isAuction);
 
       const url = `${API_BASE_URL}/api/products${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      
+      console.log('🌐 API Call URL:', url);
       
       const response = await fetch(url, {
         method: "GET",
@@ -25,6 +30,7 @@ export const productListingAPI = {
       }
 
       const data = await response.json();
+      console.log('📦 API Response:', data);
       return data;
     } catch (error) {
       console.error("Error fetching products:", error);
