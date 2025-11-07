@@ -18,7 +18,7 @@ const ListingSchema = new Schema<IListing>({
   description: { type: String, required: true },
   price: { type: Number, required: true },
   imageId: { type: Schema.Types.Mixed, required: true }, // Changed to Mixed to handle URLs temporarily
-  sellerId: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
+  sellerId: { type: Schema.Types.ObjectId, required: true },
   categoryId: { type: Schema.Types.ObjectId, required: true, ref: 'Category' },
   condition: {
     type: String,
