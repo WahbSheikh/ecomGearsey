@@ -95,15 +95,15 @@ export function useNavigation() {
     isUserMenuOpen,
     searchQuery,
     roleInfo,
-    
+
     // Refs
     userMenuRef,
-    
+
     // State setters
     setIsMenuOpen,
     setIsUserMenuOpen,
     setSearchQuery,
-    
+
     // Event handlers
     handleSearch,
     handleMarketplaceClick,
