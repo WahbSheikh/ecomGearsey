@@ -10,7 +10,7 @@ function AuctionProductCard({ product }) {
 
   return (
     <Link to={`/product/${product.id}`} className="group">
-      <div className="card hover:scale-105 transition-transform duration-300 overflow-hidden bg-surface border border-border shadow-md hover:shadow-lg rounded-xl">
+      <div id="auctionpr" className="card hover:scale-105 transition-transform duration-300 overflow-hidden bg-surface border border-border shadow-md hover:shadow-lg rounded-xl">
         <div className="relative">
           <img
             src={

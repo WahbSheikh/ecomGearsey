@@ -1,6 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Search, ShoppingCart, User, ChevronDown, Menu, X } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  ChevronDown,
+  Menu,
+  X,
+  Home,
+  Package,
+  Newspaper,
+  Info,
+  DollarSign,
+  Star,
+} from "lucide-react";
 import { useAppContext } from "../../../../config/context/AppContext";
 import { useAuth } from "../../../../hooks/useAuth";
 
@@ -10,11 +22,12 @@ function Navigation() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isSectionsMenuOpen, setIsSectionsMenuOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   const userMenuRef = useRef(null);
+  const sectionsMenuRef = useRef(null);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -22,47 +35,48 @@ function Navigation() {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setIsUserMenuOpen(false);
       }
+      if (
+        sectionsMenuRef.current &&
+        !sectionsMenuRef.current.contains(event.target)
+      ) {
+        setIsSectionsMenuOpen(false);
+      }
     };
 
-    if (isUserMenuOpen) {
+    if (isUserMenuOpen || isSectionsMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isUserMenuOpen]);
+  }, [isUserMenuOpen, isSectionsMenuOpen]);
 
   // Close dropdowns when user changes
   useEffect(() => {
     if (user) {
       setIsUserMenuOpen(false);
       setIsMenuOpen(false);
+      setIsSectionsMenuOpen(false);
     }
   }, [user]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    console.log("Searching for:", searchQuery);
-  };
-
-  const handleMarketplaceClick = (e) => {
-    e.preventDefault();
-
+  // Helper function to scroll to section
+  const scrollToSection = (sectionId) => {
     if (location.pathname === "/") {
-      document.getElementById("marketplace")?.scrollIntoView({
+      document.getElementById(sectionId)?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
     } else {
       navigate("/");
       setTimeout(() => {
-        document.getElementById("marketplace")?.scrollIntoView({
+        document.getElementById(sectionId)?.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
       }, 100);
     }
-
     setIsMenuOpen(false);
+    setIsSectionsMenuOpen(false);
   };
 
   const handleSellItemClick = (e) => {
@@ -99,6 +113,53 @@ function Navigation() {
       .toUpperCase();
   };
 
+  // Sections Menu Component
+  const SectionsMenu = () => (
+    <div className="absolute right-0 mt-2 w-56 bg-surface-elevated text-font-main rounded-lg shadow-xl border border-border py-2 z-50">
+      <button
+        onClick={() => scrollToSection("marketplace")}
+        className="w-full flex items-center gap-3 px-4 py-3 text-font-main hover:bg-surface transition-colors"
+      >
+        <Star size={18} className="text-primary-500" />
+        <span className="font-medium">Featured Items</span>
+      </button>
+
+      <button
+        onClick={() => scrollToSection("Auctions")}
+        className="w-full flex items-center gap-3 px-4 py-3 text-font-main hover:bg-surface transition-colors"
+      >
+        <DollarSign size={18} className="text-secondary-500" />
+        <span className="font-medium">Auctions</span>
+      </button>
+
+      <button
+        onClick={() => scrollToSection("categories")}
+        className="w-full flex items-center gap-3 px-4 py-3 text-font-main hover:bg-surface transition-colors"
+      >
+        <Package size={18} className="text-tertiary-500" />
+        <span className="font-medium">Categories</span>
+      </button>
+
+      <hr className="my-2 border-border" />
+
+      <button
+        onClick={() => scrollToSection("why-choose-us")}
+        className="w-full flex items-center gap-3 px-4 py-3 text-font-main hover:bg-surface transition-colors"
+      >
+        <Info size={18} className="text-primary-500" />
+        <span className="font-medium">About Us</span>
+      </button>
+
+      <button
+        onClick={() => scrollToSection("newsletter")}
+        className="w-full flex items-center gap-3 px-4 py-3 text-font-main hover:bg-surface transition-colors"
+      >
+        <Newspaper size={18} className="text-secondary-500" />
+        <span className="font-medium">Newsletter</span>
+      </button>
+    </div>
+  );
+
   // Desktop links
   const DesktopLinks = () => (
     <div className="hidden md:flex items-center space-x-8">
@@ -109,14 +170,14 @@ function Navigation() {
         Home
       </Link>
 
+      {/* Inventory link - visible to all non-admin users */}
       {!isAdmin && (
-        <a
-          href="#marketplace"
-          onClick={handleMarketplaceClick}
-          className="text-font-main hover:text-secondary-500 font-bold uppercase tracking-wide transition-colors cursor-pointer"
+        <Link
+          to="/filter"
+          className="text-font-main hover:text-secondary-500 font-bold uppercase tracking-wide transition-colors"
         >
-          Marketplace
-        </a>
+          Inventory
+        </Link>
       )}
 
       {isAdmin && (
@@ -245,32 +306,6 @@ function Navigation() {
           {/* Desktop Navigation */}
           <DesktopLinks />
 
-          {/* Search Bar - Hidden for Admin */}
-          {!isAdmin && (
-            <form
-              onSubmit={handleSearch}
-              className="hidden md:flex items-center flex-1 max-w-md mx-8"
-            >
-              <div className="relative w-full">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by part name, model, or category..."
-                  className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  aria-label="Search inventory"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500 hover:text-secondary-500"
-                  aria-label="Search"
-                >
-                  <Search size={20} />
-                </button>
-              </div>
-            </form>
-          )}
-
           {/* Right side items */}
           <div className="flex items-center space-x-4">
             {/* Cart - Hidden for Admin */}
@@ -287,6 +322,27 @@ function Navigation() {
                   </span>
                 )}
               </Link>
+            )}
+
+            {/* Sections dropdown - only for logged-out users - MOVED HERE */}
+            {!user && (
+              <div className="hidden md:block relative" ref={sectionsMenuRef}>
+                <button
+                  onClick={() => setIsSectionsMenuOpen(!isSectionsMenuOpen)}
+                  className="flex items-center gap-2 p-2 text-font-main hover:text-secondary-500 transition-colors rounded-lg hover:bg-surface/50"
+                  aria-label="Explore sections"
+                >
+                  <Home size={20} />
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform ${
+                      isSectionsMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {isSectionsMenuOpen && <SectionsMenu />}
+              </div>
             )}
 
             {/* User Section */}
@@ -340,28 +396,6 @@ function Navigation() {
       {isMenuOpen && (
         <div className="md:hidden bg-surface-elevated border-t border-border">
           <div className="px-4 py-4 space-y-4">
-            {!isAdmin && (
-              <form onSubmit={handleSearch}>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search..."
-                    className="w-full pl-4 pr-12 py-2 bg-surface text-font-main border border-border rounded-lg"
-                    aria-label="Search inventory"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500 hover:text-secondary-500"
-                    aria-label="Search"
-                  >
-                    <Search size={20} />
-                  </button>
-                </div>
-              </form>
-            )}
-
             <div className="space-y-2">
               <Link
                 to="/"
@@ -371,14 +405,65 @@ function Navigation() {
                 Home
               </Link>
 
+              {/* Inventory link - visible to all non-admin users */}
               {!isAdmin && (
-                <a
-                  href="#marketplace"
-                  onClick={handleMarketplaceClick}
-                  className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-secondary-500 transition-colors cursor-pointer"
+                <Link
+                  to="/filter"
+                  className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-secondary-500 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
                 >
-                  Marketplace
-                </a>
+                  Inventory
+                </Link>
+              )}
+
+              {/* Sections - only for logged-out users in mobile */}
+              {!user && (
+                <div className="pt-2 pb-2 border-t border-border space-y-2">
+                  <div className="text-xs uppercase tracking-wider text-font-secondary font-bold mb-2 flex items-center gap-2">
+                    <Home size={14} />
+                    <span>Explore Homepage</span>
+                  </div>
+
+                  <button
+                    onClick={() => scrollToSection("marketplace")}
+                    className="w-full flex items-center gap-3 py-2 text-font-main hover:text-primary-500 transition-colors"
+                  >
+                    <Star size={18} className="text-primary-500" />
+                    <span>Featured Items</span>
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("Auctions")}
+                    className="w-full flex items-center gap-3 py-2 text-font-main hover:text-secondary-500 transition-colors"
+                  >
+                    <DollarSign size={18} className="text-secondary-500" />
+                    <span>Auctions</span>
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("categories")}
+                    className="w-full flex items-center gap-3 py-2 text-font-main hover:text-tertiary-500 transition-colors"
+                  >
+                    <Package size={18} className="text-tertiary-500" />
+                    <span>Categories</span>
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("why-choose-us")}
+                    className="w-full flex items-center gap-3 py-2 text-font-main hover:text-primary-500 transition-colors"
+                  >
+                    <Info size={18} className="text-primary-500" />
+                    <span>About Us</span>
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("newsletter")}
+                    className="w-full flex items-center gap-3 py-2 text-font-main hover:text-secondary-500 transition-colors"
+                  >
+                    <Newspaper size={18} className="text-secondary-500" />
+                    <span>Newsletter</span>
+                  </button>
+                </div>
               )}
 
               {isAdmin && (
