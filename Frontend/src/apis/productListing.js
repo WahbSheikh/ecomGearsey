@@ -5,19 +5,22 @@ export const productListingAPI = {
   async getProducts(filters = {}) {
     try {
       const queryParams = new URLSearchParams();
-      
-      if (filters.limit) queryParams.append('limit', filters.limit);
-      if (filters.category) queryParams.append('category', filters.category);
-      if (filters.sellerId) queryParams.append('sellerId', filters.sellerId);
-      if (filters.query) queryParams.append('query', filters.query);
-      if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
-      if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
-      if (filters.isAuction !== undefined) queryParams.append('isAuction', filters.isAuction);
 
-      const url = `${API_BASE_URL}/api/products${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      
-      console.log('🌐 API Call URL:', url);
-      
+      if (filters.limit) queryParams.append("limit", filters.limit);
+      if (filters.category) queryParams.append("category", filters.category);
+      if (filters.sellerId) queryParams.append("sellerId", filters.sellerId);
+      if (filters.query) queryParams.append("query", filters.query);
+      if (filters.minPrice) queryParams.append("minPrice", filters.minPrice);
+      if (filters.maxPrice) queryParams.append("maxPrice", filters.maxPrice);
+      if (filters.isAuction !== undefined)
+        queryParams.append("isAuction", filters.isAuction);
+
+      const url = `${API_BASE_URL}/api/products${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
+
+      console.log("🌐 API Call URL:", url);
+
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -30,7 +33,7 @@ export const productListingAPI = {
       }
 
       const data = await response.json();
-      console.log('📦 API Response:', data);
+      console.log("📦 API Response:", data);
       return data;
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -38,11 +41,38 @@ export const productListingAPI = {
     }
   },
 
+  // Get single product by ID
+  async getProductById(productId) {
+    try {
+      const url = `${API_BASE_URL}/api/products/${productId}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("📦 Product Detail:", data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      throw error;
+    }
+  },
+
   // Get all categories
   async getCategories(limit = 50) {
     try {
-      const url = `${API_BASE_URL}/api/category${limit ? `?limit=${limit}` : ''}`;
-      
+      const url = `${API_BASE_URL}/api/category${
+        limit ? `?limit=${limit}` : ""
+      }`;
+
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -74,7 +104,9 @@ export const productListingAPI = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
@@ -98,7 +130,9 @@ export const productListingAPI = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
@@ -122,7 +156,9 @@ export const productListingAPI = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
@@ -146,7 +182,9 @@ export const productListingAPI = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
@@ -179,8 +217,11 @@ export const productListingAPI = {
       { name: "body", description: "Body parts and exterior components" },
       { name: "wheels", description: "Wheels, tires, and related parts" },
       { name: "accessories", description: "Car accessories and add-ons" },
-      { name: "transmission", description: "Transmission and drivetrain parts" },
-      { name: "suspension", description: "Suspension and steering components" }
+      {
+        name: "transmission",
+        description: "Transmission and drivetrain parts",
+      },
+      { name: "suspension", description: "Suspension and steering components" },
     ];
 
     try {
@@ -194,13 +235,16 @@ export const productListingAPI = {
             },
             body: JSON.stringify(category),
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             results.push(data);
           }
         } catch (error) {
-          console.log(`Category ${category.name} might already exist or creation failed:`, error.message);
+          console.log(
+            `Category ${category.name} might already exist or creation failed:`,
+            error.message
+          );
         }
       }
       return { message: "Default categories created", results };
@@ -208,7 +252,7 @@ export const productListingAPI = {
       console.error("Error creating default categories:", error);
       throw error;
     }
-  }
+  },
 };
 
 export default productListingAPI;

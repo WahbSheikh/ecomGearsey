@@ -58,28 +58,28 @@ function AdminDashboard() {
 
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey);
-    setIsSidebarOpen(false); // Close sidebar on mobile after selection
+    setIsSidebarOpen(false);
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 min-h-screen">
+    <div className="min-h-screen bg-bg">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-surface-elevated p-4 rounded-lg mb-4 sticky top-0 z-30">
+      <div className="lg:hidden bg-surface-elevated p-4 sticky top-0 z-40 shadow-lg border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
-              <Shield className="text-font-main" size={20} />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center flex-shrink-0">
+              <Shield className="text-white" size={20} />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-sm font-bold text-font-main">Admin Panel</h2>
-              <p className="text-xs text-font-secondary truncate max-w-[150px]">
+              <p className="text-xs text-font-secondary truncate max-w-[180px]">
                 {user?.email}
               </p>
             </div>
           </div>
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-surface rounded-lg transition-colors"
+            className="p-2 hover:bg-surface rounded-lg transition-colors flex-shrink-0"
             aria-label="Toggle Menu"
           >
             {isSidebarOpen ? (
@@ -91,177 +91,180 @@ function AdminDashboard() {
         </div>
 
         {/* Active Tab Indicator - Mobile */}
-        <div className="mt-3 flex items-center gap-2 p-2 bg-surface rounded-lg">
-          {activeTabData && (
-            <>
-              <activeTabData.icon className="text-primary-500" size={18} />
-              <span className="text-sm font-medium text-font-main">
-                {activeTabData.label}
-              </span>
-            </>
-          )}
-        </div>
+        {activeTabData && (
+          <div className="mt-3 flex items-center gap-2 p-2 bg-surface rounded-lg">
+            <activeTabData.icon
+              className="text-primary-500 flex-shrink-0"
+              size={18}
+            />
+            <span className="text-sm font-medium text-font-main truncate">
+              {activeTabData.label}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Sidebar Overlay - Mobile */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
-      <aside
-        className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        w-80 lg:w-72 xl:w-80 flex-shrink-0
-        transform transition-transform duration-300 ease-in-out
-        ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }
-      `}
-      >
-        <div className="h-full lg:h-auto card p-4 lg:p-6 lg:sticky lg:top-24 overflow-y-auto">
-          {/* Desktop Header */}
-          <div className="hidden lg:flex items-center gap-3 pb-6 border-b border-border mb-6">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
-              <Shield className="text-font-main" size={24} />
+      {/* Main Container */}
+      <div className="flex flex-col lg:flex-row max-w-[1920px] mx-auto">
+        {/* Sidebar */}
+        <aside
+          className={`
+            fixed lg:sticky top-0 left-0 z-50 lg:z-10
+            w-80 lg:w-72 xl:w-80 flex-shrink-0
+            h-screen lg:h-[calc(100vh-2rem)]
+            lg:my-4 lg:ml-4
+            transform transition-transform duration-300 ease-in-out
+            ${
+              isSidebarOpen
+                ? "translate-x-0"
+                : "-translate-x-full lg:translate-x-0"
+            }
+          `}
+        >
+          <div className="h-full bg-surface-elevated rounded-none lg:rounded-xl border-r lg:border border-border shadow-2xl lg:shadow-md overflow-hidden flex flex-col">
+            {/* Desktop Header */}
+            <div className="hidden lg:flex items-center gap-3 p-6 border-b border-border flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center flex-shrink-0">
+                <Shield className="text-white" size={24} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-font-main">
+                  Admin Panel
+                </h2>
+                <p className="text-xs text-font-secondary truncate">
+                  {user?.email}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-font-main">Admin Panel</h2>
-              <p className="text-xs text-font-secondary truncate">
-                {user?.email}
-              </p>
-            </div>
-          </div>
 
-          {/* Mobile Close Button */}
-          <div className="lg:hidden flex items-center justify-between mb-4 pb-4 border-b border-border">
-            <h3 className="text-lg font-bold text-font-main">Navigation</h3>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="p-2 hover:bg-surface rounded-lg transition-colors"
-            >
-              <X size={20} className="text-font-main" />
-            </button>
-          </div>
-
-          {/* Navigation Tabs */}
-          <nav className="space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.key;
-
-              return (
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6 pt-20 lg:pt-6">
+              {/* Mobile Close Button */}
+              <div className="lg:hidden flex items-center justify-between mb-4 pb-4 border-b border-border">
+                <h3 className="text-lg font-bold text-font-main">Navigation</h3>
                 <button
-                  key={tab.key}
-                  onClick={() => handleTabChange(tab.key)}
-                  className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 group ${
-                    isActive
-                      ? "bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main shadow-lg"
-                      : "bg-surface hover:bg-surface-elevated text-font-secondary hover:text-font-main"
-                  }`}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-2 hover:bg-surface rounded-lg transition-colors"
+                  aria-label="Close Menu"
                 >
-                  <Icon
-                    size={20}
-                    className={
-                      isActive
-                        ? "text-font-main"
-                        : "text-font-secondary group-hover:text-primary-500"
-                    }
-                  />
-                  <div className="flex-1 text-left min-w-0">
-                    <p
-                      className={`font-medium text-sm ${
-                        isActive ? "text-font-main" : ""
-                      }`}
-                    >
-                      {tab.label}
-                    </p>
-                    <p
-                      className={`text-xs truncate ${
-                        isActive ? "text-font-main/80" : "text-font-secondary"
-                      }`}
-                    >
-                      {tab.description}
-                    </p>
-                  </div>
-                  {isActive && (
-                    <ChevronRight
-                      size={18}
-                      className="text-font-main flex-shrink-0"
-                    />
-                  )}
+                  <X size={20} className="text-font-main" />
                 </button>
-              );
-            })}
-          </nav>
+              </div>
 
-          {/* Quick Stats */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-xs font-semibold text-font-secondary uppercase tracking-wider mb-3">
-              Quick Stats
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2 bg-surface rounded-lg">
-                <span className="text-xs text-font-secondary">
-                  Active Users
-                </span>
-                <span className="text-sm font-bold text-font-main">-</span>
-              </div>
-              <div className="flex items-center justify-between p-2 bg-surface rounded-lg">
-                <span className="text-xs text-font-secondary">
-                  Total Listings
-                </span>
-                <span className="text-sm font-bold text-font-main">-</span>
-              </div>
-              <div className="flex items-center justify-between p-2 bg-surface rounded-lg">
-                <span className="text-xs text-font-secondary">
-                  Active Auctions
-                </span>
-                <span className="text-sm font-bold text-font-main">-</span>
+              {/* Navigation Tabs */}
+              <nav className="space-y-2">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.key;
+
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => handleTabChange(tab.key)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
+                        isActive
+                          ? "bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-lg"
+                          : "bg-surface hover:bg-surface-elevated text-font-secondary hover:text-font-main"
+                      }`}
+                    >
+                      <Icon
+                        size={20}
+                        className={`flex-shrink-0 ${
+                          isActive
+                            ? "text-white"
+                            : "text-font-secondary group-hover:text-primary-500"
+                        }`}
+                      />
+                      <div className="flex-1 text-left min-w-0">
+                        <p
+                          className={`font-medium text-sm ${
+                            isActive ? "text-white" : ""
+                          }`}
+                        >
+                          {tab.label}
+                        </p>
+                        <p
+                          className={`text-xs truncate ${
+                            isActive ? "text-white/80" : "text-font-secondary"
+                          }`}
+                        >
+                          {tab.description}
+                        </p>
+                      </div>
+                      {isActive && (
+                        <ChevronRight
+                          size={18}
+                          className="text-white flex-shrink-0"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Quick Stats */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <p className="text-xs font-semibold text-font-secondary uppercase tracking-wider mb-3">
+                  Quick Stats
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-surface rounded-lg hover:bg-surface-elevated transition-colors">
+                    <span className="text-xs text-font-secondary">
+                      Active Users
+                    </span>
+                    <span className="text-sm font-bold text-font-main">-</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-surface rounded-lg hover:bg-surface-elevated transition-colors">
+                    <span className="text-xs text-font-secondary">
+                      Total Listings
+                    </span>
+                    <span className="text-sm font-bold text-font-main">-</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-surface rounded-lg hover:bg-surface-elevated transition-colors">
+                    <span className="text-xs text-font-secondary">
+                      Active Auctions
+                    </span>
+                    <span className="text-sm font-bold text-font-main">-</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 min-w-0 px-2 sm:px-0">
-        {/* Page Header - Desktop Only */}
-        <div className="hidden lg:block mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            {activeTabData && (
-              <>
-                <activeTabData.icon className="text-primary-500" size={32} />
-                <h1 className="text-2xl xl:text-3xl font-bold text-font-main">
-                  {activeTabData.label}
-                </h1>
-              </>
+        {/* Main Content */}
+        <main className="flex-1 min-w-0 p-4 lg:p-6">
+          <div className="w-full">
+            {activeTab === "users" && <UsersManagementTab />}
+            {activeTab === "listings" && <ListingsManagementTab />}
+            {activeTab === "analytics" && <SystemAnalyticsTab />}
+            {activeTab === "settings" && (
+              <div className="bg-surface-elevated rounded-xl border border-border p-8 lg:p-12 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center mx-auto mb-4">
+                    <Settings size={32} className="text-font-secondary" />
+                  </div>
+                  <h3 className="text-xl font-bold text-font-main mb-2">
+                    Settings
+                  </h3>
+                  <p className="text-font-secondary">
+                    Platform settings and configuration options coming soon
+                  </p>
+                </div>
+              </div>
             )}
           </div>
-          <p className="text-font-secondary">{activeTabData?.description}</p>
-        </div>
-
-        {/* Tab Content */}
-        <div className="pb-6">
-          {activeTab === "users" && <UsersManagementTab />}
-          {activeTab === "listings" && <ListingsManagementTab />}
-          {activeTab === "analytics" && <SystemAnalyticsTab />}
-          {activeTab === "settings" && (
-            <div className="card p-8 lg:p-12 text-center">
-              <Settings size={48} className="mx-auto text-border mb-4" />
-              <h3 className="text-xl font-bold text-font-main mb-2">
-                Settings
-              </h3>
-              <p className="text-font-secondary">
-                Platform settings coming soon
-              </p>
-            </div>
-          )}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

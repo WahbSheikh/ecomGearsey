@@ -2,6 +2,7 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { MongoClient } from "mongodb";
 import { betterAuth } from "better-auth";
 import { admin } from "better-auth/plugins"; 
+
 const client = new MongoClient(process.env.MONGO_URI as string);
 const db = client.db();
 
@@ -12,35 +13,34 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL as string,
   trustedOrigins: ["http://localhost:5173", "http://localhost:3000"],
   
-  // ✅ Add admin plugin
   plugins: [
-    admin()
+    admin({
+      defaultRole: "customer", // ✅ Set default role
+    })
   ],
   
   user: {
     additionalFields: {
-      role: {
-        type: "string",
-        required: true,
-        default: "customer",
-      },
+      // ❌ REMOVE the role field - admin plugin handles it
       address: {
         type: "string",
         required: true,
+        input: true,
       },
       phone: {
         type: "string",
         required: true,
+        input: true,
       },
       rating: {
         type: "number",
         required: false,
-        default: 0,
+        defaultValue: 0,
       },
       total_reviews: {
         type: "number",
         required: false,
-        default: 0,
+        defaultValue: 0,
       },
     },
   },

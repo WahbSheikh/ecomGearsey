@@ -9,6 +9,12 @@ import {
   Trash2,
   Ban,
   CheckCircle,
+  Mail,
+  Phone,
+  MapPin,
+  Filter,
+  Download,
+  UserPlus,
 } from "lucide-react";
 import { userAPI } from "../../../../../apis/userAPI";
 import { useAppContext } from "../../../../../config/context/AppContext";
@@ -20,8 +26,8 @@ function UsersManagementTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [viewMode, setViewMode] = useState("table"); // 'table' or 'grid'
 
-  // Fetch users from backend
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -30,9 +36,6 @@ function UsersManagementTab() {
     setIsLoading(true);
     try {
       const response = await userAPI.getAllUsers();
-      console.log("📦 Fetched users:", response);
-
-      // Handle different response structures
       const usersData = response.users || response.data || response;
       setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
@@ -66,11 +69,11 @@ function UsersManagementTab() {
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case "admin":
-        return "bg-primary-500/20 text-primary-500 border-primary-500";
+        return "bg-gradient-to-r from-primary-500/20 to-primary-700/20 text-primary-500 border-primary-500/50";
       case "seller":
-        return "bg-secondary-500/20 text-secondary-500 border-secondary-500";
+        return "bg-gradient-to-r from-secondary-500/20 to-warning-500/20 text-secondary-500 border-secondary-500/50";
       case "customer":
-        return "bg-tertiary-500/20 text-tertiary-500 border-tertiary-500";
+        return "bg-gradient-to-r from-tertiary-500/20 to-success-500/20 text-tertiary-500 border-tertiary-500/50";
       default:
         return "bg-surface text-font-secondary border-border";
     }
@@ -78,16 +81,17 @@ function UsersManagementTab() {
 
   const getStatusBadge = (user) => {
     const isBlocked = user.blocked || user.status === "blocked";
-
     if (isBlocked) {
       return (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-error-500/20 text-error-500 border border-error-500">
+        <span className="px-3 py-1.5 text-xs font-semibold rounded-full bg-gradient-to-r from-error-500/20 to-error-500/10 text-error-500 border border-error-500/50 flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-error-500 animate-pulse" />
           Blocked
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 text-xs font-medium rounded-full bg-success-500/20 text-success-500 border border-success-500">
+      <span className="px-3 py-1.5 text-xs font-semibold rounded-full bg-gradient-to-r from-success-500/20 to-success-500/10 text-success-500 border border-success-500/50 flex items-center gap-1.5">
+        <div className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" />
         Active
       </span>
     );
@@ -108,21 +112,14 @@ function UsersManagementTab() {
         users.filter((user) => user.id !== userId && user._id !== userId)
       );
       setActiveDropdown(null);
-
       dispatch({
         type: "ADD_NOTIFICATION",
-        payload: {
-          type: "success",
-          message: "User deleted successfully",
-        },
+        payload: { type: "success", message: "User deleted successfully" },
       });
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
-        payload: {
-          type: "error",
-          message: "Failed to delete user",
-        },
+        payload: { type: "error", message: "Failed to delete user" },
       });
     }
   };
@@ -138,7 +135,6 @@ function UsersManagementTab() {
         )
       );
       setActiveDropdown(null);
-
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {
@@ -149,10 +145,7 @@ function UsersManagementTab() {
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
-        payload: {
-          type: "error",
-          message: "Failed to update user role",
-        },
+        payload: { type: "error", message: "Failed to update user role" },
       });
     }
   };
@@ -175,7 +168,6 @@ function UsersManagementTab() {
         )
       );
       setActiveDropdown(null);
-
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {
@@ -188,10 +180,7 @@ function UsersManagementTab() {
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
-        payload: {
-          type: "error",
-          message: "Failed to update user status",
-        },
+        payload: { type: "error", message: "Failed to update user status" },
       });
     }
   };
@@ -204,7 +193,6 @@ function UsersManagementTab() {
     return matchesSearch && matchesRole;
   });
 
-  // Count users by role
   const userCounts = {
     total: users.length,
     admin: users.filter((u) => u.role === "admin").length,
@@ -216,74 +204,134 @@ function UsersManagementTab() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-font-secondary">Loading users...</p>
+          <div className="w-16 h-16 relative mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-surface-elevated"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-font-main font-semibold mb-1">Loading users...</p>
+          <p className="text-font-secondary text-sm">Please wait</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Stats */}
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-font-main mb-2">
-              Users Management
-            </h2>
-            <p className="text-font-secondary">Manage all platform users</p>
+    <div className="space-y-6 animate-fade-in">
+      {/* Enhanced Header with Gradient Background */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated border border-border p-8 shadow-xl">
+        {/* Animated Background Elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl animate-breathe"></div>
+        <div
+          className="absolute bottom-0 left-0 w-64 h-64 bg-secondary-500/5 rounded-full blur-3xl animate-breathe"
+          style={{ animationDelay: "1s" }}
+        ></div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/20">
+                <Users className="text-white" size={32} />
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold text-font-main mb-1">
+                  Users Management
+                </h2>
+                <p className="text-font-secondary">
+                  Manage all platform users and permissions
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-primary-500/20 to-secondary-500/20 rounded-xl border border-primary-500/50 shadow-lg">
+                <Users className="text-primary-500" size={24} />
+                <div>
+                  <p className="text-xs text-font-secondary">Total Users</p>
+                  <p className="text-2xl font-bold text-font-main">
+                    {userCounts.total}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-primary-500/10 rounded-lg border border-primary-500">
-            <Users className="text-primary-500" size={20} />
-            <span className="text-font-main font-bold">
-              {userCounts.total} Users
-            </span>
+
+          {/* Enhanced Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="group relative overflow-hidden bg-gradient-to-br from-primary-500/10 to-primary-500/5 hover:from-primary-500/20 hover:to-primary-500/10 p-5 rounded-xl border border-primary-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/10 hover:-translate-y-1">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:scale-110 transition-transform">
+                  <Shield className="text-white" size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-font-main">
+                    {userCounts.admin}
+                  </p>
+                  <p className="text-xs text-font-secondary mt-1">
+                    {((userCounts.admin / userCounts.total) * 100 || 0).toFixed(
+                      1
+                    )}
+                    %
+                  </p>
+                </div>
+              </div>
+              <p className="text-font-secondary text-sm font-medium">
+                Administrators
+              </p>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 to-primary-700"></div>
+            </div>
+
+            <div className="group relative overflow-hidden bg-gradient-to-br from-secondary-500/10 to-secondary-500/5 hover:from-secondary-500/20 hover:to-secondary-500/10 p-5 rounded-xl border border-secondary-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-secondary-500/10 hover:-translate-y-1">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-secondary-500 to-warning-500 flex items-center justify-center shadow-lg shadow-secondary-500/20 group-hover:scale-110 transition-transform">
+                  <Store className="text-white" size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-font-main">
+                    {userCounts.seller}
+                  </p>
+                  <p className="text-xs text-font-secondary mt-1">
+                    {(
+                      (userCounts.seller / userCounts.total) * 100 || 0
+                    ).toFixed(1)}
+                    %
+                  </p>
+                </div>
+              </div>
+              <p className="text-font-secondary text-sm font-medium">Sellers</p>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary-500 to-warning-500"></div>
+            </div>
+
+            <div className="group relative overflow-hidden bg-gradient-to-br from-tertiary-500/10 to-tertiary-500/5 hover:from-tertiary-500/20 hover:to-tertiary-500/10 p-5 rounded-xl border border-tertiary-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-tertiary-500/10 hover:-translate-y-1">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-tertiary-500 to-success-500 flex items-center justify-center shadow-lg shadow-tertiary-500/20 group-hover:scale-110 transition-transform">
+                  <User className="text-white" size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-font-main">
+                    {userCounts.customer}
+                  </p>
+                  <p className="text-xs text-font-secondary mt-1">
+                    {(
+                      (userCounts.customer / userCounts.total) * 100 || 0
+                    ).toFixed(1)}
+                    %
+                  </p>
+                </div>
+              </div>
+              <p className="text-font-secondary text-sm font-medium">
+                Customers
+              </p>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-tertiary-500 to-success-500"></div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-surface-elevated p-4 rounded-lg border border-border">
-            <div className="flex items-center gap-3">
-              <Shield className="text-primary-500" size={24} />
-              <div>
-                <p className="text-font-secondary text-sm">Admins</p>
-                <p className="text-font-main text-2xl font-bold">
-                  {userCounts.admin}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-surface-elevated p-4 rounded-lg border border-border">
-            <div className="flex items-center gap-3">
-              <Store className="text-secondary-500" size={24} />
-              <div>
-                <p className="text-font-secondary text-sm">Sellers</p>
-                <p className="text-font-main text-2xl font-bold">
-                  {userCounts.seller}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-surface-elevated p-4 rounded-lg border border-border">
-            <div className="flex items-center gap-3">
-              <User className="text-tertiary-500" size={24} />
-              <div>
-                <p className="text-font-secondary text-sm">Customers</p>
-                <p className="text-font-main text-2xl font-bold">
-                  {userCounts.customer}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+      {/* Enhanced Filters Section */}
+      <div className="bg-surface-elevated rounded-2xl border border-border p-6 shadow-lg">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative group">
             <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-font-secondary"
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-font-secondary group-focus-within:text-primary-500 transition-colors"
               size={20}
             />
             <input
@@ -291,14 +339,14 @@ function UsersManagementTab() {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-lg text-font-main placeholder-font-secondary focus:outline-none focus:border-primary-500"
+              className="w-full pl-12 pr-4 py-3.5 bg-surface border-2 border-border rounded-xl text-font-main placeholder-font-secondary focus:outline-none focus:border-primary-500 focus:shadow-lg focus:shadow-primary-500/10 transition-all"
             />
           </div>
 
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            className="px-4 py-2 bg-surface border border-border rounded-lg text-font-main focus:outline-none focus:border-primary-500"
+            className="px-5 py-3.5 bg-surface border-2 border-border rounded-xl text-font-main focus:outline-none focus:border-primary-500 focus:shadow-lg focus:shadow-primary-500/10 transition-all cursor-pointer"
           >
             <option value="all">All Roles</option>
             <option value="customer">Customers</option>
@@ -308,32 +356,33 @@ function UsersManagementTab() {
 
           <button
             onClick={fetchUsers}
-            className="px-4 py-2 bg-primary-500 text-font-main rounded-lg hover:bg-primary-700 transition-colors"
+            className="px-6 py-3.5 bg-gradient-to-r from-primary-500 to-primary-700 text-white rounded-xl font-semibold hover:from-primary-600 hover:to-primary-800 transition-all duration-300 shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 hover:-translate-y-0.5 flex items-center gap-2"
           >
+            <Download size={18} />
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="card overflow-hidden">
+      {/* Enhanced Users Table */}
+      <div className="bg-surface-elevated rounded-2xl border border-border overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-surface-elevated border-b border-border">
+            <thead className="bg-gradient-to-r from-surface to-surface-elevated border-b-2 border-border">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-font-secondary uppercase tracking-wider">
-                  User
+                <th className="px-6 py-5 text-left text-xs font-bold text-font-secondary uppercase tracking-wider">
+                  User Information
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-font-secondary uppercase tracking-wider">
+                <th className="px-6 py-5 text-left text-xs font-bold text-font-secondary uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-font-secondary uppercase tracking-wider">
+                <th className="px-6 py-5 text-left text-xs font-bold text-font-secondary uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-font-secondary uppercase tracking-wider">
-                  Contact
+                <th className="px-6 py-5 text-left text-xs font-bold text-font-secondary uppercase tracking-wider">
+                  Contact Details
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-font-secondary uppercase tracking-wider">
+                <th className="px-6 py-5 text-left text-xs font-bold text-font-secondary uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -341,71 +390,87 @@ function UsersManagementTab() {
             <tbody className="divide-y divide-border">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan="5"
-                    className="px-6 py-12 text-center text-font-secondary"
-                  >
-                    No users found
+                  <td colSpan="5" className="px-6 py-16 text-center">
+                    <Users size={48} className="mx-auto text-border mb-4" />
+                    <p className="text-font-secondary text-lg font-medium">
+                      No users found
+                    </p>
+                    <p className="text-font-secondary text-sm mt-1">
+                      Try adjusting your filters
+                    </p>
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => {
+                filteredUsers.map((user, index) => {
                   const userId = user.id || user._id;
                   const isDropdownOpen = activeDropdown === userId;
 
                   return (
                     <tr
                       key={userId}
-                      className="hover:bg-surface-elevated transition-colors"
+                      className="hover:bg-surface transition-all duration-200 group"
+                      style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-font-main font-bold">
-                            {user.name?.charAt(0).toUpperCase() ||
-                              user.email?.charAt(0).toUpperCase()}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:shadow-xl group-hover:shadow-primary-500/20 transition-all group-hover:scale-110">
+                              {user.name?.charAt(0).toUpperCase() ||
+                                user.email?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success-500 rounded-full border-2 border-surface-elevated"></div>
                           </div>
-                          <div>
-                            <p className="text-font-main font-medium">
+                          <div className="min-w-0">
+                            <p className="text-font-main font-semibold text-base truncate">
                               {user.name || "No Name"}
                             </p>
-                            <p className="text-font-secondary text-sm">
-                              {user.email}
-                            </p>
+                            <div className="flex items-center gap-1.5 text-font-secondary text-sm mt-0.5">
+                              <Mail size={12} />
+                              <p className="truncate">{user.email}</p>
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-5">
                         <div
-                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${getRoleBadgeColor(
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 ${getRoleBadgeColor(
                             user.role
-                          )}`}
+                          )} shadow-md`}
                         >
                           {getRoleIcon(user.role)}
-                          <span className="text-xs font-medium capitalize">
+                          <span className="text-sm font-bold capitalize">
                             {user.role}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">{getStatusBadge(user)}</td>
-                      <td className="px-6 py-4">
-                        <p className="text-font-secondary text-sm">
-                          {user.phone || "No phone"}
-                        </p>
-                        <p className="text-font-secondary text-xs">
-                          {user.address || "No address"}
-                        </p>
+                      <td className="px-6 py-5">{getStatusBadge(user)}</td>
+                      <td className="px-6 py-5">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 text-font-secondary text-sm">
+                            <Phone size={14} className="text-secondary-500" />
+                            <p className="truncate">
+                              {user.phone || "No phone"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 text-font-secondary text-xs">
+                            <MapPin size={12} className="text-tertiary-500" />
+                            <p className="truncate max-w-[200px]">
+                              {user.address || "No address"}
+                            </p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-5">
                         <div className="relative">
                           <button
                             onClick={() =>
                               setActiveDropdown(isDropdownOpen ? null : userId)
                             }
-                            className="p-2 hover:bg-surface rounded-lg transition-colors"
+                            className="p-2.5 hover:bg-surface rounded-xl transition-all duration-200 hover:shadow-md group-hover:bg-surface/50"
                           >
                             <MoreVertical
-                              size={18}
-                              className="text-font-secondary"
+                              size={20}
+                              className="text-font-secondary group-hover:text-font-main transition-colors"
                             />
                           </button>
 
@@ -415,8 +480,8 @@ function UsersManagementTab() {
                                 className="fixed inset-0 z-10"
                                 onClick={() => setActiveDropdown(null)}
                               />
-                              <div className="absolute right-0 mt-2 w-48 bg-surface-elevated rounded-lg shadow-xl border border-border py-2 z-20">
-                                <div className="px-4 py-2 text-xs font-semibold text-font-secondary uppercase tracking-wider border-b border-border">
+                              <div className="absolute right-0 mt-2 w-56 bg-surface-elevated rounded-xl shadow-2xl border-2 border-border py-2 z-20 animate-scale-in">
+                                <div className="px-4 py-2.5 text-xs font-bold text-font-secondary uppercase tracking-wider border-b border-border">
                                   Change Role
                                 </div>
                                 {["customer", "seller", "admin"].map((role) => (
@@ -426,17 +491,19 @@ function UsersManagementTab() {
                                       handleChangeRole(userId, role)
                                     }
                                     disabled={user.role === role}
-                                    className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
+                                    className={`w-full text-left px-4 py-3 text-sm transition-all flex items-center gap-3 ${
                                       user.role === role
-                                        ? "text-font-secondary cursor-not-allowed"
-                                        : "text-font-main hover:bg-surface"
+                                        ? "text-font-secondary cursor-not-allowed bg-surface/30"
+                                        : "text-font-main hover:bg-surface hover:pl-5"
                                     }`}
                                   >
                                     {getRoleIcon(role)}
-                                    <span className="capitalize">{role}</span>
+                                    <span className="capitalize font-medium">
+                                      {role}
+                                    </span>
                                     {user.role === role && (
-                                      <span className="ml-auto text-xs">
-                                        (Current)
+                                      <span className="ml-auto text-xs bg-primary-500/20 text-primary-500 px-2 py-0.5 rounded-full">
+                                        Current
                                       </span>
                                     )}
                                   </button>
@@ -446,16 +513,16 @@ function UsersManagementTab() {
 
                                 <button
                                   onClick={() => handleToggleStatus(userId)}
-                                  className="w-full text-left px-4 py-2 text-sm text-warning-500 hover:bg-surface transition-colors flex items-center gap-2"
+                                  className="w-full text-left px-4 py-3 text-sm text-warning-500 hover:bg-surface transition-all flex items-center gap-3 hover:pl-5 font-medium"
                                 >
                                   {user.blocked || user.status === "blocked" ? (
                                     <>
-                                      <CheckCircle size={16} />
+                                      <CheckCircle size={18} />
                                       Unblock User
                                     </>
                                   ) : (
                                     <>
-                                      <Ban size={16} />
+                                      <Ban size={18} />
                                       Block User
                                     </>
                                   )}
@@ -463,9 +530,9 @@ function UsersManagementTab() {
 
                                 <button
                                   onClick={() => handleDeleteUser(userId)}
-                                  className="w-full text-left px-4 py-2 text-sm text-error-500 hover:bg-surface transition-colors flex items-center gap-2"
+                                  className="w-full text-left px-4 py-3 text-sm text-error-500 hover:bg-surface transition-all flex items-center gap-3 hover:pl-5 font-medium"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={18} />
                                   Delete User
                                 </button>
                               </div>

@@ -35,27 +35,53 @@ export const useSignupForm = () => {
     setIsLoading(true);
 
     try {
-      // Signup
-      await authService.signup({
+      // ✅ Step 1: Create user account (without role in additionalFields)
+      const signupResult = await authService.signup({
         email: formData.email,
         password: formData.password,
         name: formData.name,
-        role: selectedRole,
         phone: formData.phone,
         address: formData.address,
       });
 
-      // ✅ Just refresh session - AppContext will automatically update
+      console.log("✅ User created:", signupResult);
+
+      // ✅ Step 2: Refresh session to get the user ID
       const session = await refreshSession();
       const newUser = session?.data?.user;
 
-      // ❌ REMOVE THIS - Don't manually dispatch SET_USER
-      // dispatch({
-      //   type: "SET_USER",
-      //   payload: newUser,
-      // });
+      if (!newUser?.id) {
+        throw new Error("Failed to get user ID after signup");
+      }
 
-      // Show success notification
+      console.log("✅ Session refreshed, user ID:", newUser.id);
+
+      // ✅ Step 3: Set the role using admin.setRole (only if not "customer")
+      if (selectedRole !== "customer") {
+        console.log(`🔄 Setting role to ${selectedRole}...`);
+        const roleResult = await authService.setUserRole(
+          newUser.id,
+          selectedRole
+        );
+        console.log("✅ Role set:", roleResult);
+
+        // ✅ Step 4: Refresh session again to get updated role
+        const updatedSession = await refreshSession();
+        const updatedUser = updatedSession?.data?.user;
+
+        dispatch({
+          type: "ADD_NOTIFICATION",
+          payload: {
+            type: "success",
+            message: `Account created successfully as ${selectedRole}! Welcome, ${updatedUser?.name}!`,
+          },
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        return updatedUser;
+      }
+
+      // Show success notification for customer
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {
@@ -64,11 +90,10 @@ export const useSignupForm = () => {
         },
       });
 
-      // ✅ Wait longer for AppContext useEffect to complete
       await new Promise((resolve) => setTimeout(resolve, 300));
-
       return newUser;
     } catch (error) {
+      console.error("❌ Signup error:", error);
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {

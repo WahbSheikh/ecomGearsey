@@ -1,20 +1,18 @@
 import { authClient } from "../lib/auth";
 
 export const userAPI = {
-  // Get all users (admin only) - Using Better Auth admin.listUsers
+  // Get all users
   async getAllUsers() {
     try {
       const { data, error } = await authClient.admin.listUsers({
         query: {
-          limit: 1000, // Get all users
+          limit: 1000,
         },
       });
 
       if (error) {
         throw new Error(error.message || "Failed to fetch users");
       }
-
-      console.log("✅ Users fetched:", data);
 
       return {
         users: data.users,
@@ -26,9 +24,33 @@ export const userAPI = {
     }
   },
 
-  // Update user role (admin only) - Using Better Auth admin.setRole
-  async updateUserRole(userId, newRole) {
+  // Check if admin exists (client-side check)
+  async checkAdminExists(users) {
+    const admins = users.filter((user) => user.role === "admin");
+    return {
+      exists: admins.length > 0,
+      admin: admins[0] || null,
+      count: admins.length,
+    };
+  },
+
+  // Update user role with client-side validation
+  async updateUserRole(userId, newRole, allUsers) {
     try {
+      // Client-side validation: Check if trying to create another admin
+      if (newRole === "admin") {
+        const adminCheck = this.checkAdminExists(allUsers);
+
+        if (adminCheck.exists && adminCheck.admin.id !== userId) {
+          throw new Error(
+            `Only one admin allowed! ${
+              adminCheck.admin.name || adminCheck.admin.email
+            } is currently the admin. Please demote them first.`
+          );
+        }
+      }
+
+      // Use Better Auth's built-in setRole
       const { data, error } = await authClient.admin.setRole({
         userId: userId,
         role: newRole,
@@ -45,7 +67,7 @@ export const userAPI = {
     }
   },
 
-  // Delete user (admin only) - Using Better Auth admin.removeUser ✅
+  // Delete user
   async deleteUser(userId) {
     try {
       const { data, error } = await authClient.admin.removeUser({
@@ -56,7 +78,6 @@ export const userAPI = {
         throw new Error(error.message || "Failed to delete user");
       }
 
-      console.log("✅ User deleted:", data);
       return data;
     } catch (error) {
       console.error("Error deleting user:", error);
@@ -64,11 +85,10 @@ export const userAPI = {
     }
   },
 
-  // Block/Unblock user (admin only) - Using Better Auth admin.banUser/unbanUser
+  // Block/Unblock user
   async toggleUserStatus(userId, isBlocked) {
     try {
       if (isBlocked) {
-        // Ban user
         const { data, error } = await authClient.admin.banUser({
           userId: userId,
           banReason: "Blocked by admin",
@@ -79,7 +99,6 @@ export const userAPI = {
         }
         return data;
       } else {
-        // Unban user
         const { data, error } = await authClient.admin.unbanUser({
           userId: userId,
         });

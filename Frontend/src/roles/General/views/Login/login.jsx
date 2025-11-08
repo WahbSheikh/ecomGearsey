@@ -41,7 +41,7 @@ function Login() {
       setTimeout(() => {
         navigate(dashboardPath, {
           replace: true,
-          state: { user: loggedInUser }, // ✅ Pass user in navigation state
+          state: { user: loggedInUser },
         });
       }, 100);
     } catch (error) {
@@ -49,27 +49,18 @@ function Login() {
     }
   };
 
-  // Handle signup submit
+  // Handle signup submit - NO auto-navigation
   const handleSignupSubmit = async (e) => {
     try {
-      const newUser = await signupForm.handleSubmit(e);
+      const result = await signupForm.handleSubmit(e);
 
-      if (!newUser) {
-        console.error("❌ No user returned from signup");
-        return;
+      // ✅ If signup successful (returns null), switch to login tab
+      if (result === null) {
+        console.log("✅ Signup successful, switching to login tab");
+        setTimeout(() => {
+          setIsLogin(true); // Switch to login tab
+        }, 500);
       }
-
-      console.log("🎯 Navigating to dashboard for role:", newUser.role);
-
-      const dashboardPath = authService.getRoleDashboardPath(newUser.role);
-
-      // Use setTimeout to ensure state updates complete
-      setTimeout(() => {
-        navigate(dashboardPath, {
-          replace: true,
-          state: { user: newUser }, // ✅ Pass user in navigation state
-        });
-      }, 100);
     } catch (error) {
       console.error("❌ Signup submit error:", error);
     }
