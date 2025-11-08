@@ -1,7 +1,7 @@
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { MongoClient } from "mongodb";
 import { betterAuth } from "better-auth";
-
+import { admin } from "better-auth/plugins"; 
 const client = new MongoClient(process.env.MONGO_URI as string);
 const db = client.db();
 
@@ -10,9 +10,13 @@ export const auth = betterAuth({
   appName: "gearsey-backend",
   secret: process.env.BETTER_AUTH_SECRET as string,
   baseURL: process.env.BETTER_AUTH_URL as string,
-  // Add trusted origins to fix CORS issues
   trustedOrigins: ["http://localhost:5173", "http://localhost:3000"],
-  plugins: [],
+  
+  // ✅ Add admin plugin
+  plugins: [
+    admin()
+  ],
+  
   user: {
     additionalFields: {
       role: {
@@ -45,7 +49,6 @@ export const auth = betterAuth({
     autoSignIn: true,
     minPasswordLength: 6,
   },
-  // Add advanced options for CORS
   advanced: {
     crossSubDomainCookies: {
       enabled: false,

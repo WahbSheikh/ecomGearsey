@@ -50,14 +50,12 @@ function Navigation() {
     }
   }, [isUserMenuOpen, isSectionsMenuOpen]);
 
-  // Close dropdowns when user changes
+  // Close dropdowns when location changes
   useEffect(() => {
-    if (user) {
-      setIsUserMenuOpen(false);
-      setIsMenuOpen(false);
-      setIsSectionsMenuOpen(false);
-    }
-  }, [user]);
+    setIsUserMenuOpen(false);
+    setIsMenuOpen(false);
+    setIsSectionsMenuOpen(false);
+  }, [location.pathname]);
 
   // Helper function to scroll to section
   const scrollToSection = (sectionId) => {
@@ -95,6 +93,20 @@ function Navigation() {
   const handleLoginClick = () => {
     navigate("/login");
     setIsUserMenuOpen(false);
+  };
+
+  // Handle logo click - redirect admin/seller to dashboard
+  const handleLogoClick = (e) => {
+    const role = user?.role;
+
+    if (role === "admin") {
+      e.preventDefault();
+      navigate("/dashboard/admin");
+    } else if (role === "seller") {
+      e.preventDefault();
+      navigate("/dashboard/seller");
+    }
+    // For customers and non-logged-in users, let default Link behavior work
   };
 
   // Helpers for role-based rendering
@@ -163,12 +175,15 @@ function Navigation() {
   // Desktop links
   const DesktopLinks = () => (
     <div className="hidden md:flex items-center space-x-8">
-      <Link
-        to="/"
-        className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
-      >
-        Home
-      </Link>
+      {/* Home link - only show for customers and non-logged-in users */}
+      {!isAdmin && !isSeller && (
+        <Link
+          to="/"
+          className="text-font-main hover:text-primary-500 font-bold uppercase tracking-wide transition-colors"
+        >
+          Home
+        </Link>
+      )}
 
       {/* Inventory link - visible to all non-admin users */}
       {!isAdmin && (
@@ -294,7 +309,11 @@ function Navigation() {
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         <div className="flex gap-5 items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link
+            to="/"
+            onClick={handleLogoClick}
+            className="flex items-center space-x-2"
+          >
             <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
               <span className="text-font-main font-bold text-sm">G</span>
             </div>
@@ -308,8 +327,8 @@ function Navigation() {
 
           {/* Right side items */}
           <div className="flex items-center space-x-4">
-            {/* Cart - Hidden for Admin */}
-            {!isAdmin && (
+            {/* Cart - Hidden for Admin and Seller */}
+            {!isAdmin && !isSeller && (
               <Link
                 to="/cart"
                 className="relative p-2 text-font-main hover:text-tertiary-500 transition-colors"
@@ -324,7 +343,7 @@ function Navigation() {
               </Link>
             )}
 
-            {/* Sections dropdown - only for logged-out users - MOVED HERE */}
+            {/* Sections dropdown - only for logged-out users */}
             {!user && (
               <div className="hidden md:block relative" ref={sectionsMenuRef}>
                 <button
@@ -373,7 +392,7 @@ function Navigation() {
             ) : (
               <button
                 onClick={handleLoginClick}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold shadow-lg"
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200"
               >
                 <User size={16} />
                 <span className="hidden md:block">Login</span>
@@ -397,13 +416,16 @@ function Navigation() {
         <div className="md:hidden bg-surface-elevated border-t border-border">
           <div className="px-4 py-4 space-y-4">
             <div className="space-y-2">
-              <Link
-                to="/"
-                className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Home
-              </Link>
+              {/* Home link - only show for customers and non-logged-in users */}
+              {!isAdmin && !isSeller && (
+                <Link
+                  to="/"
+                  className="block py-2 text-font-main font-bold uppercase tracking-wide hover:text-primary-500 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Home
+                </Link>
+              )}
 
               {/* Inventory link - visible to all non-admin users */}
               {!isAdmin && (
@@ -577,7 +599,7 @@ function Navigation() {
                       handleLoginClick();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold shadow-lg"
+                    className="w-full py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-font-main rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all duration-200 font-bold"
                   >
                     Login
                   </button>

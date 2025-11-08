@@ -102,6 +102,28 @@ function PublicOnlyRoute({ children }) {
   return children;
 }
 
+// Homepage Route Component - Restricts admin and seller access
+function HomepageRoute({ children }) {
+  const { user, isPending } = useAuth();
+
+  if (isPending) {
+    return <LoadingSpinner />;
+  }
+
+  // If user is admin or seller, redirect to their dashboard
+  if (user && (user.role === "admin" || user.role === "seller")) {
+    const dashboardMap = {
+      admin: "/dashboard/admin",
+      seller: "/dashboard/seller",
+    };
+
+    return <Navigate to={dashboardMap[user.role]} replace />;
+  }
+
+  // Allow customers and non-logged-in users
+  return children;
+}
+
 // Dashboard Redirect Component
 function DashboardRedirect() {
   const { user, isPending } = useAuth();
@@ -166,8 +188,17 @@ function AppRoutes() {
       <main className="flex-1">
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
+            {/* Homepage - Restricted for admin and seller */}
+            <Route
+              path="/"
+              element={
+                <HomepageRoute>
+                  <Homepage />
+                </HomepageRoute>
+              }
+            />
+
             {/* Public Routes */}
-            <Route path="/" element={<Homepage />} />
             <Route path="/marketplace" element={<ProductGrid />} />
             <Route path="/filter" element={<Filter />} />
             <Route path="/product/:id" element={<ProductDetails />} />
