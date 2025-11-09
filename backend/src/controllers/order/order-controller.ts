@@ -1,17 +1,20 @@
 import { Order } from "@/models/order.js";
 import { OrderItem, type IOrderItem } from "@/models/orderItem.js";
+import { Listing } from "@/models/listing.js";
 import { type Request, type Response } from "express";
 
 type OrderBody = {
   userId: string;
   total_amount: number;
-  items: Omit<IOrderItem, 'orderId'>[]; // Items without orderId
+  items: Omit<IOrderItem, 'orderId'>[];
 };
 
-export async function getAllOrders(req: Request, res: Response) {
+export async function getAllOrders(req: Request, res: Response): Promise<void> {
   try {
     const { limit } = req.query;
-    const orders = await Order.find().limit(Number(limit) || 10);
+    const orders = await Order.find()
+      .limit(Number(limit) || 10)
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "All orders fetched successfully",
@@ -26,17 +29,18 @@ export async function getAllOrders(req: Request, res: Response) {
   }
 }
 
-export async function getUserOrders(req: Request, res: Response) {
+export async function getUserOrders(req: Request, res: Response): Promise<void> {
   try {
     const { userId } = req.params;
     const { limit } = req.query;
     if (!userId) {
-      return res
-        .status(403)
-        .json({ message: "Missing userId in request params" });
+      res.status(403).json({ message: "Missing userId in request params" });
+      return;
     }
 
-    const orders = await Order.find({ userId }).limit(Number(limit) || 10).sort({ createdAt: -1 });
+    const orders = await Order.find({ userId })
+      .limit(Number(limit) || 10)
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "Orders fetched successfully",
@@ -51,13 +55,12 @@ export async function getUserOrders(req: Request, res: Response) {
   }
 }
 
-export async function getUserOrderItems(req: Request, res: Response) {
+export async function getUserOrderItems(req: Request, res: Response): Promise<void> {
   try {
     const { userId, orderId } = req.params;
     if (!userId || !orderId) {
-      return res
-        .status(403)
-        .json({ message: "Missing userId or orderId in request params" });
+      res.status(403).json({ message: "Missing userId or orderId in request params" });
+      return;
     }
 
     const order = await Order.findOne({ _id: orderId, userId });
@@ -77,7 +80,7 @@ export async function getUserOrderItems(req: Request, res: Response) {
   }
 }
 
-export async function createOrder(req: Request, res: Response) {
+export async function createOrder(req: Request, res: Response): Promise<void> {
   try {
     const { userId, total_amount, items }: OrderBody = req.body;
 
@@ -87,12 +90,39 @@ export async function createOrder(req: Request, res: Response) {
     console.log("  - items:", items);
 
     if (!userId || !total_amount || !items || items.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         message: "Missing required fields: userId, total_amount, items",
       });
+      return;
     }
 
-    // Create the order first using Mongoose create (not insertOne)
+    // ✅ Check product availability BEFORE creating order
+    for (const item of items) {
+      const product = await Listing.findById(item.partId);
+      
+      if (!product) {
+        res.status(404).json({
+          message: `Product ${item.partId} not found`,
+        });
+        return;
+      }
+
+      if (product.status === "Sold") {
+        res.status(400).json({
+          message: `Product "${product.name}" is already sold`,
+        });
+        return;
+      }
+
+      if (product.status === "Removed") {
+        res.status(400).json({
+          message: `Product "${product.name}" is no longer available`,
+        });
+        return;
+      }
+    }
+
+    // Create the order with Pending status
     const orderResult = await Order.create({
       userId,
       total_amount,
@@ -102,7 +132,6 @@ export async function createOrder(req: Request, res: Response) {
 
     console.log("✅ Order created:", orderResult);
 
-    // Get the created order's ID
     const orderId = orderResult._id.toString();
 
     // Add orderId to each item before inserting
@@ -115,10 +144,13 @@ export async function createOrder(req: Request, res: Response) {
 
     console.log("📦 Creating order items with orderId:", itemsWithOrderId);
 
-    // Insert order items using insertMany
+    // Insert order items
     const orderItems = await OrderItem.insertMany(itemsWithOrderId);
 
     console.log("✅ Order items created:", orderItems.length, "items");
+
+    // ❌ DO NOT mark as sold here - only when payment is confirmed!
+    console.log("⏳ Products remain Active until payment is confirmed");
 
     res.status(201).json({ 
       message: "Order created successfully", 
@@ -144,13 +176,12 @@ export async function createOrder(req: Request, res: Response) {
   }
 }
 
-export async function confirmOrder(req: Request, res: Response) {
+export async function confirmOrder(req: Request, res: Response): Promise<void> {
   try {
     const { userId, orderId } = req.body;
     if (!userId || !orderId) {
-      return res
-        .status(403)
-        .json({ message: "Missing userId or orderId in request body" });
+      res.status(403).json({ message: "Missing userId or orderId in request body" });
+      return;
     }
 
     const updatedOrder = await Order.updateOne(
@@ -159,14 +190,35 @@ export async function confirmOrder(req: Request, res: Response) {
     );
 
     if (!updatedOrder.matchedCount) {
-      return res
-        .status(404)
-        .json({ message: "Order not found or could not be updated" });
+      res.status(404).json({ message: "Order not found or could not be updated" });
+      return;
     }
 
-    res
-      .status(200)
-      .json({ message: "Order confirmed successfully", updatedOrder });
+    // ✅ NOW mark products as Sold when payment is confirmed
+    const orderItems = await OrderItem.find({ orderId });
+    for (const item of orderItems) {
+      try {
+        const updateResult = await Listing.findByIdAndUpdate(
+          item.partId,
+          { 
+            status: "Sold",
+            $set: { updatedAt: new Date() }
+          },
+          { new: true }
+        );
+        
+        if (updateResult) {
+          console.log(`✅ Product ${item.partId} marked as SOLD (payment confirmed): "${updateResult.name}"`);
+        }
+      } catch (productError) {
+        console.error(`⚠️ Failed to update product ${item.partId}:`, productError);
+      }
+    }
+
+    res.status(200).json({ 
+      message: "Order confirmed and products marked as sold", 
+      updatedOrder 
+    });
   } catch (error) {
     console.error("Error confirming order:", error as Error);
     res.status(400).json({
@@ -176,14 +228,24 @@ export async function confirmOrder(req: Request, res: Response) {
   }
 }
 
-export async function cancelOrder(req: Request, res: Response) {
+export async function cancelOrder(req: Request, res: Response): Promise<void> {
   try {
     const { userId, orderId } = req.body;
     if (!userId || !orderId) {
-      return res
-        .status(403)
-        .json({ message: "Missing userId or orderId in request body" });
+      res.status(403).json({ message: "Missing userId or orderId in request body" });
+      return;
     }
+    
+    // Get order to check if it was paid
+    const order = await Order.findOne({ _id: orderId, userId });
+    
+    if (!order) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+
+    // Get order items
+    const orderItems = await OrderItem.find({ orderId });
     
     const updatedOrder = await Order.updateOne(
       { _id: orderId, userId },
@@ -191,14 +253,38 @@ export async function cancelOrder(req: Request, res: Response) {
     );
     
     if (!updatedOrder.matchedCount) {
-      return res
-        .status(404)
-        .json({ message: "Order not found or could not be updated" });
+      res.status(404).json({ message: "Order not found or could not be updated" });
+      return;
+    }
+
+    // ✅ Only restore products if order was Paid (meaning products were marked as Sold)
+    if (order.payment_status === "Paid") {
+      for (const item of orderItems) {
+        try {
+          const updateResult = await Listing.findByIdAndUpdate(
+            item.partId,
+            { 
+              status: "Active",
+              $set: { updatedAt: new Date() }
+            },
+            { new: true }
+          );
+          
+          if (updateResult) {
+            console.log(`✅ Product ${item.partId} restored to ACTIVE: "${updateResult.name}"`);
+          }
+        } catch (productError) {
+          console.error(`⚠️ Failed to restore product ${item.partId}:`, productError);
+        }
+      }
+    } else {
+      console.log("ℹ️ Order was not paid, products remain Active");
     }
     
-    res
-      .status(200)
-      .json({ message: "Order cancelled successfully", updatedOrder });
+    res.status(200).json({ 
+      message: "Order cancelled successfully", 
+      updatedOrder 
+    });
   } catch (error) {
     console.error("Error cancelling order:", error as Error);
     res.status(400).json({
@@ -208,14 +294,24 @@ export async function cancelOrder(req: Request, res: Response) {
   }
 }
 
-export async function deleteOrder(req: Request, res: Response) {
+export async function deleteOrder(req: Request, res: Response): Promise<void> {
   try {
     const { userId, orderId } = req.body;
     if (!userId || !orderId) {
-      return res
-        .status(403)
-        .json({ message: "Missing userId or orderId in request body" });
+      res.status(403).json({ message: "Missing userId or orderId in request body" });
+      return;
     }
+    
+    // Get order to check if it was paid
+    const order = await Order.findOne({ _id: orderId, userId });
+    
+    if (!order) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+
+    // Get order items BEFORE deleting
+    const orderItems = await OrderItem.find({ orderId });
     
     // Delete order items first (cascade delete)
     await OrderItem.deleteMany({ orderId });
@@ -224,16 +320,80 @@ export async function deleteOrder(req: Request, res: Response) {
     const deletedOrder = await Order.deleteOne({ _id: orderId, userId });
     
     if (!deletedOrder.deletedCount) {
-      return res
-        .status(404)
-        .json({ message: "Order not found or could not be deleted" });
+      res.status(404).json({ message: "Order not found or could not be deleted" });
+      return;
+    }
+
+    // ✅ Only restore products if order was Paid
+    if (order.payment_status === "Paid") {
+      for (const item of orderItems) {
+        try {
+          const updateResult = await Listing.findByIdAndUpdate(
+            item.partId,
+            { 
+              status: "Active",
+              $set: { updatedAt: new Date() }
+            },
+            { new: true }
+          );
+          
+          if (updateResult) {
+            console.log(`✅ Product ${item.partId} restored to ACTIVE after order deletion: "${updateResult.name}"`);
+          }
+        } catch (productError) {
+          console.error(`⚠️ Failed to restore product ${item.partId}:`, productError);
+        }
+      }
     }
     
-    res.status(200).json({ message: "Order deleted successfully" });
+    res.status(200).json({ 
+      message: "Order deleted successfully" 
+    });
   } catch (error) {
     console.error("Error deleting order:", error as Error);
     res.status(400).json({
       message: "Failed to delete order",
+      error: (error as Error).message,
+    });
+  }
+}
+
+export async function updateOrderStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const { orderId, delivery_status, payment_status } = req.body;
+    
+    if (!orderId) {
+      res.status(400).json({ message: "Missing orderId in request body" });
+      return;
+    }
+
+    const updateData: Partial<{
+      delivery_status: string;
+      payment_status: string;
+    }> = {};
+    
+    if (delivery_status) updateData.delivery_status = delivery_status;
+    if (payment_status) updateData.payment_status = payment_status;
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Order status updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating order status:", error as Error);
+    res.status(400).json({
+      message: "Failed to update order status",
       error: (error as Error).message,
     });
   }

@@ -141,6 +141,60 @@ export async function createProduct(req: Request, res: Response) {
   }
 }
 
+// Add this new function to your existing controller
+
+// Update product status (for sellers to manually mark as sold/active)
+export async function updateProductStatus(req: Request, res: Response) {
+  try {
+    const { productId, status } = req.body;
+
+    if (!productId || !status) {
+      return res.status(400).json({
+        message: "Missing required fields: productId, status",
+      });
+    }
+
+    // Validate status
+    const validStatuses = ["Active", "Sold", "Removed"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+      });
+    }
+
+    const updatedProduct = await Listing.findByIdAndUpdate(
+      productId,
+      { 
+        status,
+        $set: { updatedAt: new Date() }
+      },
+      { new: true }
+    ).populate("categoryId", ["name", "description"]);
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Transform response
+    const transformedProduct = {
+      ...updatedProduct.toObject(),
+      title: updatedProduct.name,
+      imageUrl: updatedProduct.imageId
+    };
+
+    res.status(200).json({
+      message: `Product status updated to ${status}`,
+      product: transformedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating product status:", error as Error);
+    res.status(400).json({
+      message: "Failed to update product status",
+      error: (error as Error).message,
+    });
+  }
+}
+
 // Updates a product by its ID and returns the newly updated product. Only the fields provided in the request body will be updated.
 export async function updateProduct(req: Request, res: Response) {
   try {

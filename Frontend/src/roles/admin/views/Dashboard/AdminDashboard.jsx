@@ -8,15 +8,17 @@ import {
   ChevronRight,
   Menu,
   X,
+  ShoppingCart, // Added
 } from "lucide-react";
 import { useAuth } from "../../../../hooks/useAuth";
 import UsersManagementTab from "./components/UsersManagementTab";
 import ListingsManagementTab from "./components/ListingsManagementTab";
 import SystemAnalyticsTab from "./components/SystemAnalyticsTab";
+import OrdersManagementTab from "./components/OrdersManagementTab"; // Added
 
 function AdminDashboard() {
   const { user, isPending } = useAuth();
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("orders"); // Changed default
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   if (isPending) {
@@ -28,6 +30,12 @@ function AdminDashboard() {
   }
 
   const tabs = [
+    {
+      key: "orders",
+      label: "Orders & Sales",
+      icon: ShoppingCart,
+      description: "Manage all orders",
+    },
     {
       key: "users",
       label: "Users Management",
@@ -90,7 +98,6 @@ function AdminDashboard() {
           </button>
         </div>
 
-        {/* Active Tab Indicator - Mobile */}
         {activeTabData && (
           <div className="mt-3 flex items-center gap-2 p-2 bg-surface rounded-lg">
             <activeTabData.icon
@@ -104,7 +111,6 @@ function AdminDashboard() {
         )}
       </div>
 
-      {/* Sidebar Overlay - Mobile */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
@@ -113,9 +119,7 @@ function AdminDashboard() {
         />
       )}
 
-      {/* Main Container */}
       <div className="flex flex-col lg:flex-row max-w-[1920px] mx-auto">
-        {/* Sidebar */}
         <aside
           className={`
             fixed lg:sticky top-0 left-0 z-50 lg:z-10
@@ -131,7 +135,6 @@ function AdminDashboard() {
           `}
         >
           <div className="h-full bg-surface-elevated rounded-none lg:rounded-xl border-r lg:border border-border shadow-2xl lg:shadow-md overflow-hidden flex flex-col">
-            {/* Desktop Header */}
             <div className="hidden lg:flex items-center gap-3 p-6 border-b border-border flex-shrink-0">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center flex-shrink-0">
                 <Shield className="text-white" size={24} />
@@ -146,9 +149,7 @@ function AdminDashboard() {
               </div>
             </div>
 
-            {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 pt-20 lg:pt-6">
-              {/* Mobile Close Button */}
               <div className="lg:hidden flex items-center justify-between mb-4 pb-4 border-b border-border">
                 <h3 className="text-lg font-bold text-font-main">Navigation</h3>
                 <button
@@ -160,7 +161,6 @@ function AdminDashboard() {
                 </button>
               </div>
 
-              {/* Navigation Tabs */}
               <nav className="space-y-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -210,40 +210,13 @@ function AdminDashboard() {
                   );
                 })}
               </nav>
-
-              {/* Quick Stats */}
-              <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-xs font-semibold text-font-secondary uppercase tracking-wider mb-3">
-                  Quick Stats
-                </p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-surface rounded-lg hover:bg-surface-elevated transition-colors">
-                    <span className="text-xs text-font-secondary">
-                      Active Users
-                    </span>
-                    <span className="text-sm font-bold text-font-main">-</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-surface rounded-lg hover:bg-surface-elevated transition-colors">
-                    <span className="text-xs text-font-secondary">
-                      Total Listings
-                    </span>
-                    <span className="text-sm font-bold text-font-main">-</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-surface rounded-lg hover:bg-surface-elevated transition-colors">
-                    <span className="text-xs text-font-secondary">
-                      Active Auctions
-                    </span>
-                    <span className="text-sm font-bold text-font-main">-</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="flex-1 min-w-0 p-4 lg:p-6">
           <div className="w-full">
+            {activeTab === "orders" && <OrdersManagementTab />}
             {activeTab === "users" && <UsersManagementTab />}
             {activeTab === "listings" && <ListingsManagementTab />}
             {activeTab === "analytics" && <SystemAnalyticsTab />}

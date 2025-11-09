@@ -1,6 +1,12 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Trash2, ShoppingCart, ArrowLeft } from "lucide-react";
+import {
+  Trash2,
+  ShoppingCart,
+  ArrowLeft,
+  Trash,
+  ArrowRight,
+} from "lucide-react";
 import { useAppContext } from "../../../../config/context/AppContext";
 
 // Predefined delivery options with fees
@@ -35,6 +41,21 @@ function Cart() {
       type: "REMOVE_FROM_CART",
       payload: productId,
     });
+    dispatch({
+      type: "ADD_NOTIFICATION",
+      payload: { type: "info", message: "Item removed from cart" },
+    });
+  };
+
+  // Clear entire cart
+  const clearCart = () => {
+    if (window.confirm("Are you sure you want to clear your entire cart?")) {
+      dispatch({ type: "CLEAR_CART" });
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: { type: "success", message: "Cart cleared successfully" },
+      });
+    }
   };
 
   // Calculate item price including delivery fee
@@ -72,8 +93,12 @@ function Cart() {
           <p className="text-font-secondary mt-2 mb-6">
             Start shopping to add items to your cart
           </p>
-          <Link to="/marketplace" className="btn-primary inline-block">
+          <Link
+            to="/filter"
+            className="btn-primary inline-flex items-center gap-2"
+          >
             Continue Shopping
+            <ArrowRight size={20} />
           </Link>
         </div>
       </div>
@@ -82,15 +107,27 @@ function Cart() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center gap-4 mb-8 animate-slide-down">
-        <Link
-          to="/marketplace"
-          className="flex items-center gap-2 text-font-secondary hover:text-primary-500 transition-colors"
+      {/* Header with Clear Cart Button */}
+      <div className="flex items-center justify-between mb-8 animate-slide-down">
+        <div className="flex items-center gap-4">
+          <Link
+            to="/filter"
+            className="flex items-center gap-2 text-font-secondary hover:text-primary-500 transition-colors"
+          >
+            <ArrowLeft size={20} />
+            Continue Shopping
+          </Link>
+          <h1 className="text-3xl font-bold text-font-main">Shopping Cart</h1>
+        </div>
+
+        {/* Clear Cart Button */}
+        <button
+          onClick={clearCart}
+          className="flex items-center gap-2 px-4 py-2 bg-error-500/10 text-error-500 hover:bg-error-500/20 rounded-lg font-semibold transition-colors border border-error-500/30"
         >
-          <ArrowLeft size={20} />
-          Continue Shopping
-        </Link>
-        <h1 className="text-3xl font-bold text-font-main">Shopping Cart</h1>
+          <Trash size={18} />
+          Clear Cart
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -109,10 +146,10 @@ function Cart() {
                   src={
                     Array.isArray(item.images) && item.images.length > 0
                       ? item.images[0]
-                      : item.image
+                      : item.image || item.imageUrl
                   }
                   alt={item.title}
-                  className="w-24 h-24 object-cover rounded-lg"
+                  className="w-24 h-24 object-cover rounded-lg border border-border"
                 />
                 <div className="flex-1">
                   <h3 className="font-semibold text-font-main text-lg">
@@ -122,7 +159,7 @@ function Cart() {
                     Condition: {item.condition}
                   </p>
                   <p className="text-font-secondary text-sm mb-3">
-                    Seller: {item.seller}
+                    Seller: {item.seller || "Unknown Seller"}
                   </p>
 
                   <label className="block text-font-secondary text-sm mb-1 font-medium">
@@ -205,9 +242,24 @@ function Cart() {
                 </span>
               </div>
             </div>
-            <button onClick={proceedToCheckout} className="btn-primary w-full">
+
+            {/* Checkout Button */}
+            <button
+              onClick={proceedToCheckout}
+              className="btn-primary w-full mb-3"
+            >
               Proceed to Checkout
             </button>
+
+            {/* Continue Shopping Button */}
+            <Link
+              to="/marketplace"
+              className="btn-secondary w-full flex items-center justify-center gap-2"
+            >
+              <ArrowLeft size={18} />
+              Continue Shopping
+            </Link>
+
             {!state.user && (
               <p className="text-xs text-warning-500 mt-4 text-center font-medium">
                 ⚠️ You need to login to proceed to checkout

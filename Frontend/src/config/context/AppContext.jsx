@@ -1,307 +1,407 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { useAuth } from "../../hooks/useAuth";
-import modeldata from "./modeldata";
 
+// Initial State
+const initialState = {
+  user: null,
+  products: [],
+  cart: [],
+  filters: {
+    category: "all",
+    priceRange: [0, 10000],
+    condition: "all",
+    show: "all", // 'all', 'fixed', 'auctions'
+  },
+  notifications: [],
+  userBids: [],
+  userOrders: [],
+  userListings: [],
+  isLoading: false,
+  error: null,
+};
+
+// Create Context
 const AppContext = createContext();
 
-function appReducer(state, action) {
+// Reducer Function
+const appReducer = (state, action) => {
   switch (action.type) {
+    // User Actions
     case "SET_USER":
-      console.log("🔵 AppContext Reducer - SET_USER:", action.payload);
       return {
         ...state,
         user: action.payload,
       };
 
-    case "LOGOUT":
-      console.log("🔴 AppContext Reducer - LOGOUT");
-      // Clear localStorage on logout
-      localStorage.removeItem("cart");
+    case "LOGOUT_USER":
       return {
         ...state,
         user: null,
         cart: [],
         userBids: [],
-        userListings: [],
         userOrders: [],
+        userListings: [],
       };
 
-    case "ADD_TO_CART":
-      if (state.cart.some((item) => item.id === action.payload.id)) {
-        return state;
-      }
-      const newCart = [...state.cart, action.payload];
-      // Persist cart to localStorage
-      localStorage.setItem("cart", JSON.stringify(newCart));
+    case "UPDATE_USER_PROFILE":
       return {
         ...state,
-        cart: newCart,
+        user: {
+          ...state.user,
+          ...action.payload,
+        },
+      };
+
+    // Products Actions
+    case "SET_PRODUCTS":
+      return {
+        ...state,
+        products: action.payload,
+      };
+
+    case "ADD_PRODUCT":
+      return {
+        ...state,
+        products: [...state.products, action.payload],
+      };
+
+    case "UPDATE_PRODUCT":
+      return {
+        ...state,
+        products: state.products.map((product) =>
+          product.id === action.payload.id ? action.payload : product
+        ),
+      };
+
+    case "DELETE_PRODUCT":
+      return {
+        ...state,
+        products: state.products.filter(
+          (product) => product.id !== action.payload
+        ),
+      };
+
+    // Cart Actions
+    case "ADD_TO_CART":
+      // Check if item already exists in cart
+      const existingItem = state.cart.find(
+        (item) => item.id === action.payload.id
+      );
+      if (existingItem) {
+        return {
+          ...state,
+          cart: state.cart.map((item) =>
+            item.id === action.payload.id
+              ? { ...item, quantity: (item.quantity || 1) + 1 }
+              : item
+          ),
+        };
+      }
+      return {
+        ...state,
+        cart: [...state.cart, { ...action.payload, quantity: 1 }],
       };
 
     case "REMOVE_FROM_CART":
-      const filteredCart = state.cart.filter(
-        (item) => item.id !== action.payload
-      );
-      localStorage.setItem("cart", JSON.stringify(filteredCart));
       return {
         ...state,
-        cart: filteredCart,
+        cart: state.cart.filter((item) => item.id !== action.payload),
+      };
+
+    case "UPDATE_CART_QUANTITY":
+      return {
+        ...state,
+        cart: state.cart.map((item) =>
+          item.id === action.payload.id
+            ? { ...item, quantity: action.payload.quantity }
+            : item
+        ),
       };
 
     case "CLEAR_CART":
-      localStorage.removeItem("cart");
       return {
         ...state,
         cart: [],
       };
 
-    case "UPDATE_CART_ITEM":
-      const updatedCart = state.cart.map((item) =>
-        item.id === action.payload.productId
-          ? {
-              ...item,
-              deliveryOption: action.payload.deliveryOption,
-              deliveryFee: action.payload.deliveryFee,
-            }
-          : item
-      );
-      localStorage.setItem("cart", JSON.stringify(updatedCart));
+    // Filter Actions
+    case "SET_FILTER":
       return {
         ...state,
-        cart: updatedCart,
+        filters: {
+          ...state.filters,
+          [action.payload.filterType]: action.payload.value,
+        },
       };
 
-    case "LOAD_CART":
+    case "RESET_FILTERS":
       return {
         ...state,
-        cart: action.payload,
+        filters: {
+          category: "all",
+          priceRange: [0, 10000],
+          condition: "all",
+          show: "all",
+        },
       };
 
-    case "ADD_ORDER":
+    case "SET_FILTERS":
       return {
         ...state,
-        userOrders: [action.payload, ...(state.userOrders || [])],
+        filters: {
+          ...state.filters,
+          ...action.payload,
+        },
       };
 
-    case "SET_USER_ORDERS":
-      return {
-        ...state,
-        userOrders: action.payload,
-      };
-
-    case "UPDATE_ORDER_STATUS":
-      return {
-        ...state,
-        userOrders: (state.userOrders || []).map((order) =>
-          order._id === action.payload.orderId
-            ? { ...order, ...action.payload.updates }
-            : order
-        ),
-      };
-
-    case "PLACE_BID":
-      const product = state.products?.find(
-        (p) => p.id === action.payload.productId
-      );
-
-      return {
-        ...state,
-        products:
-          state.products?.map((product) =>
-            product.id === action.payload.productId
-              ? {
-                  ...product,
-                  currentBid: action.payload.amount,
-                  bids: [
-                    {
-                      bidder: state.user?.name || "You",
-                      amount: action.payload.amount,
-                      time: new Date().toISOString(),
-                    },
-                    ...(product.bids || []),
-                  ],
-                }
-              : product
-          ) || state.products,
-        userBids: [
-          ...state.userBids,
-          {
-            id: action.payload.productId,
-            productTitle: product?.title,
-            currentBid: action.payload.amount,
-            status: "leading",
-            timeLeft: product?.timeLeft,
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      };
-
+    // Notification Actions
     case "ADD_NOTIFICATION":
+      const newNotification = {
+        id: Date.now(),
+        ...action.payload,
+        timestamp: new Date().toISOString(),
+      };
       return {
         ...state,
-        notifications: [
-          ...state.notifications,
-          {
-            ...action.payload,
-            id: Date.now(),
-            timestamp: new Date().toISOString(),
-          },
-        ],
+        notifications: [...state.notifications, newNotification],
       };
 
     case "REMOVE_NOTIFICATION":
       return {
         ...state,
         notifications: state.notifications.filter(
-          (notif) => notif.id !== action.payload
+          (notification) => notification.id !== action.payload
         ),
       };
 
-    case "CLEAR_ALL_NOTIFICATIONS":
+    case "CLEAR_NOTIFICATIONS":
       return {
         ...state,
         notifications: [],
       };
 
-    case "SET_FILTERS":
+    // Bid Actions
+    case "PLACE_BID":
       return {
         ...state,
-        filters: { ...state.filters, ...action.payload },
+        userBids: [
+          ...state.userBids,
+          {
+            id: Date.now(),
+            productId: action.payload.productId,
+            amount: action.payload.amount,
+            timestamp: new Date().toISOString(),
+            status: "leading",
+          },
+        ],
+        products: state.products.map((product) =>
+          product.id === action.payload.productId
+            ? { ...product, currentBid: action.payload.amount }
+            : product
+        ),
       };
 
-    case "RESET_FILTERS":
+    case "UPDATE_BID_STATUS":
       return {
         ...state,
-        filters: modeldata().filters || {},
+        userBids: state.userBids.map((bid) =>
+          bid.id === action.payload.bidId
+            ? { ...bid, status: action.payload.status }
+            : bid
+        ),
       };
 
-    case "SET_USER_LISTINGS":
+    case "REMOVE_BID":
       return {
         ...state,
-        userListings: action.payload,
+        userBids: state.userBids.filter((bid) => bid.id !== action.payload),
       };
 
-    case "SET_USER_BIDS":
+    // Order Actions
+    case "ADD_ORDER":
       return {
         ...state,
-        userBids: action.payload,
+        userOrders: [...state.userOrders, action.payload],
       };
 
-    case "UPDATE_PRODUCT":
+    case "UPDATE_ORDER":
       return {
         ...state,
-        products:
-          state.products?.map((product) =>
-            product.id === action.payload.id
-              ? { ...product, ...action.payload.updates }
-              : product
-          ) || state.products,
+        userOrders: state.userOrders.map((order) =>
+          order.id === action.payload.id ? action.payload : order
+        ),
+      };
+
+    case "CANCEL_ORDER":
+      return {
+        ...state,
+        userOrders: state.userOrders.map((order) =>
+          order.id === action.payload
+            ? {
+                ...order,
+                status: "cancelled",
+                payment_status: "Refunded",
+                delivery_status: "Cancelled",
+              }
+            : order
+        ),
+      };
+
+    case "DELETE_ORDER":
+      return {
+        ...state,
+        userOrders: state.userOrders.filter(
+          (order) => order.id !== action.payload
+        ),
+      };
+
+    // Listing Actions (for sellers)
+    case "ADD_LISTING":
+      return {
+        ...state,
+        userListings: [...state.userListings, action.payload],
+      };
+
+    case "UPDATE_LISTING":
+      return {
+        ...state,
+        userListings: state.userListings.map((listing) =>
+          listing.id === action.payload.id ? action.payload : listing
+        ),
+      };
+
+    case "DELETE_LISTING":
+      return {
+        ...state,
+        userListings: state.userListings.filter(
+          (listing) => listing.id !== action.payload
+        ),
+      };
+
+    case "SET_LISTING_STATUS":
+      return {
+        ...state,
+        userListings: state.userListings.map((listing) =>
+          listing.id === action.payload.id
+            ? { ...listing, status: action.payload.status }
+            : listing
+        ),
+      };
+
+    // Loading and Error Actions
+    case "SET_LOADING":
+      return {
+        ...state,
+        isLoading: action.payload,
+      };
+
+    case "SET_ERROR":
+      return {
+        ...state,
+        error: action.payload,
+      };
+
+    case "CLEAR_ERROR":
+      return {
+        ...state,
+        error: null,
+      };
+
+    // Bulk Actions
+    case "RESET_STATE":
+      return initialState;
+
+    case "HYDRATE_STATE":
+      return {
+        ...state,
+        ...action.payload,
       };
 
     default:
       return state;
   }
-}
+};
 
-export function AppProvider({ children }) {
-  const initialState = {
-    ...modeldata(),
-    user: null,
-    userOrders: [],
-  };
-
+// Context Provider Component
+export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const { user, isPending } = useAuth();
 
-  // Load cart from localStorage on mount
+  // Load state from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
+    const savedFilters = localStorage.getItem("filters");
+
     if (savedCart) {
       try {
-        const parsedCart = JSON.parse(savedCart);
-        dispatch({ type: "LOAD_CART", payload: parsedCart });
+        const cart = JSON.parse(savedCart);
+        dispatch({ type: "HYDRATE_STATE", payload: { cart } });
       } catch (error) {
         console.error("Error loading cart from localStorage:", error);
       }
     }
-  }, []);
 
-  // Sync Better Auth user with AppContext
-  useEffect(() => {
-    console.log("🟡 AppContext useEffect triggered");
-    console.log("  - isPending:", isPending);
-    console.log("  - Better Auth user:", user);
-    console.log("  - Current state.user:", state.user);
-
-    if (!isPending) {
-      if (user) {
-        const hasUserChanged =
-          !state.user ||
-          state.user.id !== user.id ||
-          state.user.role !== user.role ||
-          state.user.name !== user.name ||
-          state.user.email !== user.email;
-
-        if (hasUserChanged) {
-          console.log("✅ User is logged in, updating AppContext");
-          console.log("  - User ID:", user.id);
-          console.log("  - User Name:", user.name);
-          console.log("  - User Role:", user.role);
-
-          dispatch({
-            type: "SET_USER",
-            payload: {
-              id: user.id,
-              name: user.name || "User",
-              email: user.email,
-              role: user.role || "customer",
-              phone: user.phone || null,
-              address: user.address || null,
-              rating: user.rating || 0,
-              total_reviews: user.total_reviews || 0,
-              isLoggedIn: true,
-              avatar: user.image || null,
-            },
-          });
-        }
-      } else if (state.user) {
-        console.log("❌ No user found, logging out");
-        dispatch({ type: "LOGOUT" });
+    if (savedFilters) {
+      try {
+        const filters = JSON.parse(savedFilters);
+        dispatch({ type: "HYDRATE_STATE", payload: { filters } });
+      } catch (error) {
+        console.error("Error loading filters from localStorage:", error);
       }
     }
-  }, [user, isPending]);
+  }, []);
 
-  // Debug: Log state changes (only in development)
+  // Save cart to localStorage whenever it changes
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("📊 AppContext state changed:", {
-        user: state.user,
-        role: state.user?.role,
-        cartItems: state.cart?.length,
-        userBids: state.userBids?.length,
-        userListings: state.userListings?.length,
-        userOrders: state.userOrders?.length,
-      });
+    localStorage.setItem("cart", JSON.stringify(state.cart));
+  }, [state.cart]);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("filters", JSON.stringify(state.filters));
+  }, [state.filters]);
+
+  // Auto-remove notifications after 5 seconds
+  useEffect(() => {
+    if (state.notifications.length > 0) {
+      const timer = setTimeout(() => {
+        const oldestNotification = state.notifications[0];
+        if (oldestNotification) {
+          dispatch({
+            type: "REMOVE_NOTIFICATION",
+            payload: oldestNotification.id,
+          });
+        }
+      }, 5000);
+
+      return () => clearTimeout(timer);
     }
-  }, [
-    state.user,
-    state.cart,
-    state.userBids,
-    state.userListings,
-    state.userOrders,
-  ]);
+  }, [state.notifications]);
+
+  // Clear error after 10 seconds
+  useEffect(() => {
+    if (state.error) {
+      const timer = setTimeout(() => {
+        dispatch({ type: "CLEAR_ERROR" });
+      }, 10000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [state.error]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
       {children}
     </AppContext.Provider>
   );
-}
+};
 
-export function useAppContext() {
+// Custom Hook to use App Context
+export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
     throw new Error("useAppContext must be used within an AppProvider");
   }
   return context;
-}
+};
+
+// Export context for direct access if needed
+export default AppContext;

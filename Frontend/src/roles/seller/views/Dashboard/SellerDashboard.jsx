@@ -5,6 +5,7 @@ import {
   Package,
   BarChart3,
   Hammer,
+  ShoppingCart, // Added
 } from "lucide-react";
 import { useAuth } from "../../../../hooks/useAuth";
 import TabNavigation from "../../../General/components/Tabs/TabNavigation";
@@ -12,10 +13,11 @@ import ListingsTab from "./components/ListingsTab";
 import SalesTab from "./components/SalesTab";
 import AnalyticsTab from "./components/AnalyticsTab";
 import AuctionsTab from "./components/AuctionsTab";
+import OrdersTab from "./components/OrdersTab"; // Added
 
 function SellerDashboard() {
   const { isPending } = useAuth();
-  const [activeTab, setActiveTab] = useState("listings");
+  const [activeTab, setActiveTab] = useState("orders"); // Changed default
 
   if (isPending) {
     return (
@@ -26,10 +28,10 @@ function SellerDashboard() {
   }
 
   const tabs = [
-    { key: "listings", label: "My Listings", icon: DollarSign },
+    { key: "orders", label: "Orders", icon: ShoppingCart },
+    { key: "listings", label: "My Listings", icon: Package },
     { key: "auctions", label: "Auctions", icon: Hammer },
     { key: "sales", label: "Sales", icon: TrendingUp },
-    { key: "orders", label: "Orders", icon: Package },
     { key: "analytics", label: "Analytics", icon: BarChart3 },
   ];
 
@@ -42,6 +44,7 @@ function SellerDashboard() {
       />
 
       <div className="mt-8">
+        {activeTab === "orders" && <OrdersTab />}
         {activeTab === "listings" && <ListingsTab />}
         {activeTab === "auctions" && <AuctionsTab />}
         {activeTab === "sales" && <SalesTab />}
