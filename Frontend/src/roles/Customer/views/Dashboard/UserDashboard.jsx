@@ -1,19 +1,13 @@
 import React, { useState } from "react";
-import {
-  Clock,
-  DollarSign,
-  Package,
-  Hammer,
-  Edit,
-  MoreHorizontal,
-} from "lucide-react";
+import { Clock, Package, Hammer, Edit, MoreHorizontal } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../../../config/context/AppContext";
 import { useAuth } from "../../../../hooks/useAuth";
+import MyOrders from "./MyOrders"; // Import the MyOrders component
 
 function UserDashboard() {
   const { state } = useAppContext();
-  const { user, isPending } = useAuth(); // ✅ Use ONLY useAuth for user state
+  const { user, isPending } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("bids");
 
@@ -21,7 +15,7 @@ function UserDashboard() {
     navigate("/sell");
   };
 
-  // ✅ Show loading state
+  // Show loading state
   if (isPending) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -30,7 +24,7 @@ function UserDashboard() {
     );
   }
 
-  // ✅ Redirect if not logged in (shouldn't happen due to ProtectedRoute)
+  // Redirect if not logged in
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -102,10 +96,10 @@ function UserDashboard() {
                         </p>
                         <div className="flex items-center gap-4 mt-2">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs text-amber-50 font-medium ${
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
                               bid.status === "leading"
-                                ? "bg-success-500 bg-opacity-20 text-amber-50"
-                                : "bg-error-500 bg-opacity-20 text-amber-50"
+                                ? "bg-success-500 text-white"
+                                : "bg-error-500 text-white"
                             }`}
                           >
                             {bid.status === "leading" ? "Leading" : "Outbid"}
@@ -123,9 +117,19 @@ function UserDashboard() {
                   </div>
                 ))
               ) : (
-                <p className="text-font-secondary italic">
-                  No active bids found
-                </p>
+                <div className="card p-12 text-center">
+                  <Hammer size={48} className="mx-auto text-border mb-4" />
+                  <p className="text-font-secondary">No active bids found</p>
+                  <p className="text-font-secondary text-sm mt-2">
+                    Start bidding on auction items!
+                  </p>
+                  <NavLink
+                    to="/marketplace"
+                    className="btn-primary inline-block mt-4"
+                  >
+                    Browse Auctions
+                  </NavLink>
+                </div>
               )}
             </div>
           </div>
@@ -142,40 +146,8 @@ function UserDashboard() {
         </div>
       )}
 
-      {activeTab === "orders" && (
-        <div>
-          <h2 className="text-xl font-semibold text-font-main mb-4">
-            Order History
-          </h2>
-          <div className="card p-6 space-y-4">
-            {state.userOrders && state.userOrders.length > 0 ? (
-              state.userOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between bg-bg rounded-lg p-4 hover:bg-surface transition-colors cursor-pointer"
-                >
-                  <div>
-                    <h3 className="font-semibold text-font-main mb-1">
-                      {order.productTitle}
-                    </h3>
-                    <p className="text-font-secondary mb-1">
-                      Order #{order.orderNumber} • ${order.total}
-                    </p>
-                    <span className="inline-block bg-success-500 bg-opacity-20 text-amber-50 px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
-                      Delivered
-                    </span>
-                  </div>
-                  <button className="btn-secondary px-5 py-2 font-semibold rounded-lg shadow hover:shadow-lg transition-shadow text-font-main">
-                    View Details
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p className="text-font-secondary italic">No orders found</p>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Use MyOrders component for the orders tab */}
+      {activeTab === "orders" && <MyOrders />}
 
       {activeTab === "listings" && (
         <div>
@@ -203,8 +175,8 @@ function UserDashboard() {
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           listing.type === "fixed"
-                            ? "bg-success-500 bg-opacity-20 text-amber-50"
-                            : "bg-warning-500 bg-opacity-20 text-amber-50"
+                            ? "bg-success-500 text-white"
+                            : "bg-warning-500 text-white"
                         }`}
                       >
                         {listing.type === "fixed" ? "Fixed Price" : "Auction"}

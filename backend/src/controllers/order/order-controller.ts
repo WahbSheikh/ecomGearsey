@@ -5,7 +5,7 @@ import { type Request, type Response } from "express";
 type OrderBody = {
   userId: string;
   total_amount: number;
-  items: IOrderItem[];
+  items: Omit<IOrderItem, 'orderId'>[]; // Items without orderId
 };
 
 export async function getAllOrders(req: Request, res: Response) {
@@ -33,10 +33,10 @@ export async function getUserOrders(req: Request, res: Response) {
     if (!userId) {
       return res
         .status(403)
-        .json({ message: "Missing userId in request body" });
+        .json({ message: "Missing userId in request params" });
     }
 
-    const orders = await Order.find({ userId }).limit(Number(limit) || 10);
+    const orders = await Order.find({ userId }).limit(Number(limit) || 10).sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "Orders fetched successfully",
@@ -81,27 +81,62 @@ export async function createOrder(req: Request, res: Response) {
   try {
     const { userId, total_amount, items }: OrderBody = req.body;
 
+    console.log("📦 Received order creation request:");
+    console.log("  - userId:", userId);
+    console.log("  - total_amount:", total_amount);
+    console.log("  - items:", items);
+
     if (!userId || !total_amount || !items || items.length === 0) {
       return res.status(400).json({
         message: "Missing required fields: userId, total_amount, items",
       });
     }
 
-    // Here you would typically create the order in the database
-    const order = await Order.insertOne({
+    // Create the order first using Mongoose create (not insertOne)
+    const orderResult = await Order.create({
       userId,
       total_amount,
       payment_status: "Pending",
       delivery_status: "Pending",
     });
 
-    const orderItems = await OrderItem.insertMany(items);
+    console.log("✅ Order created:", orderResult);
 
-    res
-      .status(201)
-      .json({ message: "Order created successfully", order, orderItems });
+    // Get the created order's ID
+    const orderId = orderResult._id.toString();
+
+    // Add orderId to each item before inserting
+    const itemsWithOrderId = items.map(item => ({
+      orderId: orderId,
+      partId: item.partId,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+
+    console.log("📦 Creating order items with orderId:", itemsWithOrderId);
+
+    // Insert order items using insertMany
+    const orderItems = await OrderItem.insertMany(itemsWithOrderId);
+
+    console.log("✅ Order items created:", orderItems.length, "items");
+
+    res.status(201).json({ 
+      message: "Order created successfully", 
+      order: {
+        acknowledged: true,
+        insertedId: orderId
+      }, 
+      orderItems: {
+        acknowledged: true,
+        insertedCount: orderItems.length,
+        insertedIds: orderItems.reduce((acc, item, index) => {
+          acc[index.toString()] = item._id;
+          return acc;
+        }, {} as Record<string, any>)
+      }
+    });
   } catch (error) {
-    console.error("Error creating order:", error as Error);
+    console.error("❌ Error creating order:", error as Error);
     res.status(400).json({
       message: "Failed to create order",
       error: (error as Error).message,
@@ -120,10 +155,10 @@ export async function confirmOrder(req: Request, res: Response) {
 
     const updatedOrder = await Order.updateOne(
       { _id: orderId, userId },
-      { $set: { payment_status: "Confirmed", delivery_status: "Processing" } }
+      { $set: { payment_status: "Paid", delivery_status: "Shipped" } }
     );
 
-    if (!updatedOrder) {
+    if (!updatedOrder.matchedCount) {
       return res
         .status(404)
         .json({ message: "Order not found or could not be updated" });
@@ -149,15 +184,18 @@ export async function cancelOrder(req: Request, res: Response) {
         .status(403)
         .json({ message: "Missing userId or orderId in request body" });
     }
+    
     const updatedOrder = await Order.updateOne(
       { _id: orderId, userId },
-      { $set: { payment_status: "Cancelled", delivery_status: "Cancelled" } }
+      { $set: { payment_status: "Refunded", delivery_status: "Cancelled" } }
     );
-    if (!updatedOrder) {
+    
+    if (!updatedOrder.matchedCount) {
       return res
         .status(404)
         .json({ message: "Order not found or could not be updated" });
     }
+    
     res
       .status(200)
       .json({ message: "Order cancelled successfully", updatedOrder });
@@ -178,12 +216,19 @@ export async function deleteOrder(req: Request, res: Response) {
         .status(403)
         .json({ message: "Missing userId or orderId in request body" });
     }
+    
+    // Delete order items first (cascade delete)
+    await OrderItem.deleteMany({ orderId });
+    
+    // Then delete the order
     const deletedOrder = await Order.deleteOne({ _id: orderId, userId });
-    if (!deletedOrder) {
+    
+    if (!deletedOrder.deletedCount) {
       return res
         .status(404)
         .json({ message: "Order not found or could not be deleted" });
     }
+    
     res.status(200).json({ message: "Order deleted successfully" });
   } catch (error) {
     console.error("Error deleting order:", error as Error);

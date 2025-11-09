@@ -47,6 +47,17 @@ function Cart() {
 
   // Navigate to checkout page
   const proceedToCheckout = () => {
+    if (!state.user) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "Please login to proceed to checkout",
+        },
+      });
+      navigate("/login");
+      return;
+    }
     navigate("/checkout");
   };
 
@@ -61,7 +72,7 @@ function Cart() {
           <p className="text-font-secondary mt-2 mb-6">
             Start shopping to add items to your cart
           </p>
-          <Link to="/" className="btn-primary inline-block">
+          <Link to="/marketplace" className="btn-primary inline-block">
             Continue Shopping
           </Link>
         </div>
@@ -73,7 +84,7 @@ function Cart() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center gap-4 mb-8 animate-slide-down">
         <Link
-          to="/"
+          to="/marketplace"
           className="flex items-center gap-2 text-font-secondary hover:text-primary-500 transition-colors"
         >
           <ArrowLeft size={20} />
@@ -197,7 +208,12 @@ function Cart() {
             <button onClick={proceedToCheckout} className="btn-primary w-full">
               Proceed to Checkout
             </button>
-            <p className="text-xs text-font-secondary mt-4 text-center">
+            {!state.user && (
+              <p className="text-xs text-warning-500 mt-4 text-center font-medium">
+                ⚠️ You need to login to proceed to checkout
+              </p>
+            )}
+            <p className="text-xs text-font-secondary mt-2 text-center">
               You can adjust delivery options per item above.
             </p>
           </div>

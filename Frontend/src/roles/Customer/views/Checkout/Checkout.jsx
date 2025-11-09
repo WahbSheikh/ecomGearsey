@@ -6,23 +6,30 @@ import {
   Truck,
   CheckCircle,
   Package,
+  Loader2,
 } from "lucide-react";
 import { useAppContext } from "../../../../config/context/AppContext";
+import { orderService } from "../../../../services/orderService";
 
 const Checkout = () => {
   const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Shipping, 2: Payment, 3: Review
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [error, setError] = useState(null);
+
   const [shippingInfo, setShippingInfo] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
+    fullName: state.user?.name || "",
+    email: state.user?.email || "",
+    phone: state.user?.phone || "",
     address: "",
     city: "",
     state: "",
     zipCode: "",
     country: "USA",
   });
+
   const [paymentInfo, setPaymentInfo] = useState({
     cardNumber: "",
     cardName: "",
@@ -45,39 +52,100 @@ const Checkout = () => {
     setStep(3);
   };
 
-  const handlePlaceOrder = () => {
-    // Create order object
-    const newOrder = {
-      _id: Date.now().toString(),
-      items: state.cart,
-      shippingInfo,
-      paymentInfo: {
-        cardLast4: paymentInfo.cardNumber.slice(-4),
-        cardName: paymentInfo.cardName,
-      },
-      total,
-      orderDate: new Date().toISOString(),
-      status: "Processing",
-    };
+  const handlePlaceOrder = async () => {
+    setLoading(true);
+    setError(null);
 
-    // Add order to user's orders (you'll need to implement ADD_ORDER in your reducer)
-    dispatch({ type: "ADD_ORDER", payload: newOrder });
+    try {
+      // Prepare order items for backend - backend expects partId, quantity, price
+      const orderItems = state.cart.map((item) => ({
+        partId: String(item.id), // Backend expects string partId
+        quantity: item.quantity || 1,
+        price: item.price + (item.deliveryFee || 0), // Include delivery fee in item price
+      }));
 
-    // Clear cart
-    dispatch({ type: "CLEAR_CART" });
+      // Create order via backend API
+      const orderData = {
+        userId: state.user.id,
+        total_amount: total,
+        items: orderItems,
+      };
 
-    // Show success notification
-    dispatch({
-      type: "ADD_NOTIFICATION",
-      payload: { type: "success", message: "Order placed successfully!" },
-    });
+      console.log(
+        "📦 Creating order with data:",
+        JSON.stringify(orderData, null, 2)
+      );
+      console.log("📦 User ID:", state.user.id);
+      console.log("📦 Cart items:", state.cart);
 
-    // Redirect to dashboard
-    navigate("/dashboard/user");
+      const response = await orderService.createOrder(orderData);
+      console.log("✅ Order created successfully:", response);
+
+      // Store order details locally
+      const newOrder = {
+        _id: response.order.insertedId,
+        userId: state.user.id,
+        total_amount: total,
+        payment_status: "Pending",
+        delivery_status: "Pending",
+        items: state.cart,
+        shippingInfo,
+        paymentInfo: {
+          cardLast4: paymentInfo.cardNumber.slice(-4),
+          cardName: paymentInfo.cardName,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Add order to user's orders in context
+      dispatch({ type: "ADD_ORDER", payload: newOrder });
+
+      // Clear cart
+      dispatch({ type: "CLEAR_CART" });
+
+      // Show success notification
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "success",
+          message: `Order placed successfully! Redirecting...`,
+        },
+      });
+
+      // Set success state and stop loading
+      setOrderSuccess(true);
+      setLoading(false);
+
+      // Redirect to user dashboard
+      setTimeout(() => {
+        navigate("/dashboard/user", {
+          state: { newOrderId: response.order.insertedId },
+        });
+      }, 1500);
+    } catch (err) {
+      console.error("❌ Error creating order:", err);
+      console.error("❌ Error details:", err.message);
+
+      const errorMessage =
+        err.message || "Failed to place order. Please try again.";
+      setError(errorMessage);
+
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: errorMessage,
+        },
+      });
+
+      // IMPORTANT: Reset loading state on error
+      setLoading(false);
+    }
   };
 
   // Redirect if cart is empty
-  if (state.cart.length === 0 && step < 3) {
+  if (state.cart.length === 0 && !loading && !orderSuccess) {
     navigate("/cart");
     return null;
   }
@@ -88,6 +156,7 @@ const Checkout = () => {
       <button
         onClick={() => (step === 1 ? navigate("/cart") : setStep(step - 1))}
         className="flex items-center gap-2 text-font-secondary hover:text-primary-500 mb-6 transition-colors animate-slide-down"
+        disabled={loading || orderSuccess}
       >
         <ArrowLeft size={20} />
         {step === 1 ? "Back to Cart" : "Previous Step"}
@@ -96,6 +165,14 @@ const Checkout = () => {
       <h1 className="text-3xl font-bold text-font-main mb-8 animate-slide-down animate-delay-100">
         Checkout
       </h1>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-error-500 bg-opacity-10 border border-error-500 text-error-500 px-4 py-3 rounded-lg mb-6 animate-fade-in">
+          <p className="font-semibold">Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Progress Steps */}
       <div className="flex items-center justify-center mb-12 animate-fade-in">
@@ -108,7 +185,7 @@ const Checkout = () => {
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
                 step >= 1
-                  ? "bg-primary-500 text-font-main"
+                  ? "bg-primary-500 text-white"
                   : "bg-surface-elevated text-font-secondary"
               }`}
             >
@@ -129,7 +206,7 @@ const Checkout = () => {
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
                 step >= 2
-                  ? "bg-primary-500 text-font-main"
+                  ? "bg-primary-500 text-white"
                   : "bg-surface-elevated text-font-secondary"
               }`}
             >
@@ -150,7 +227,7 @@ const Checkout = () => {
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
                 step >= 3
-                  ? "bg-primary-500 text-font-main"
+                  ? "bg-primary-500 text-white"
                   : "bg-surface-elevated text-font-secondary"
               }`}
             >
@@ -483,9 +560,26 @@ const Checkout = () => {
 
                 <button
                   onClick={handlePlaceOrder}
-                  className="btn-primary w-full text-lg"
+                  disabled={loading || orderSuccess}
+                  className={`w-full text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
+                    orderSuccess
+                      ? "bg-success-500 hover:bg-success-600 text-white font-semibold py-3 px-6 rounded-lg"
+                      : "btn-primary"
+                  }`}
                 >
-                  Place Order - ${total.toFixed(2)}
+                  {loading ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      Processing Order...
+                    </>
+                  ) : orderSuccess ? (
+                    <>
+                      <CheckCircle size={20} />
+                      Order Placed! Redirecting...
+                    </>
+                  ) : (
+                    <>Place Order - ${total.toFixed(2)}</>
+                  )}
                 </button>
               </div>
             </div>

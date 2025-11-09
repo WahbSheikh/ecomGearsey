@@ -15,33 +15,88 @@ function appReducer(state, action) {
 
     case "LOGOUT":
       console.log("🔴 AppContext Reducer - LOGOUT");
+      // Clear localStorage on logout
+      localStorage.removeItem("cart");
       return {
         ...state,
         user: null,
         cart: [],
         userBids: [],
         userListings: [],
+        userOrders: [],
       };
 
     case "ADD_TO_CART":
       if (state.cart.some((item) => item.id === action.payload.id)) {
         return state;
       }
+      const newCart = [...state.cart, action.payload];
+      // Persist cart to localStorage
+      localStorage.setItem("cart", JSON.stringify(newCart));
       return {
         ...state,
-        cart: [...state.cart, action.payload],
+        cart: newCart,
       };
 
     case "REMOVE_FROM_CART":
+      const filteredCart = state.cart.filter(
+        (item) => item.id !== action.payload
+      );
+      localStorage.setItem("cart", JSON.stringify(filteredCart));
       return {
         ...state,
-        cart: state.cart.filter((item) => item.id !== action.payload),
+        cart: filteredCart,
       };
 
     case "CLEAR_CART":
+      localStorage.removeItem("cart");
       return {
         ...state,
         cart: [],
+      };
+
+    case "UPDATE_CART_ITEM":
+      const updatedCart = state.cart.map((item) =>
+        item.id === action.payload.productId
+          ? {
+              ...item,
+              deliveryOption: action.payload.deliveryOption,
+              deliveryFee: action.payload.deliveryFee,
+            }
+          : item
+      );
+      localStorage.setItem("cart", JSON.stringify(updatedCart));
+      return {
+        ...state,
+        cart: updatedCart,
+      };
+
+    case "LOAD_CART":
+      return {
+        ...state,
+        cart: action.payload,
+      };
+
+    case "ADD_ORDER":
+      return {
+        ...state,
+        userOrders: [action.payload, ...(state.userOrders || [])],
+      };
+
+    case "SET_USER_ORDERS":
+      return {
+        ...state,
+        userOrders: action.payload,
+      };
+
+    case "UPDATE_ORDER_STATUS":
+      return {
+        ...state,
+        userOrders: (state.userOrders || []).map((order) =>
+          order._id === action.payload.orderId
+            ? { ...order, ...action.payload.updates }
+            : order
+        ),
       };
 
     case "PLACE_BID":
@@ -120,20 +175,6 @@ function appReducer(state, action) {
         filters: modeldata().filters || {},
       };
 
-    case "UPDATE_CART_ITEM":
-      return {
-        ...state,
-        cart: state.cart.map((item) =>
-          item.id === action.payload.productId
-            ? {
-                ...item,
-                deliveryOption: action.payload.deliveryOption,
-                deliveryFee: action.payload.deliveryFee,
-              }
-            : item
-        ),
-      };
-
     case "SET_USER_LISTINGS":
       return {
         ...state,
@@ -166,10 +207,24 @@ export function AppProvider({ children }) {
   const initialState = {
     ...modeldata(),
     user: null,
+    userOrders: [],
   };
 
   const [state, dispatch] = useReducer(appReducer, initialState);
   const { user, isPending } = useAuth();
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        dispatch({ type: "LOAD_CART", payload: parsedCart });
+      } catch (error) {
+        console.error("Error loading cart from localStorage:", error);
+      }
+    }
+  }, []);
 
   // Sync Better Auth user with AppContext
   useEffect(() => {
@@ -180,7 +235,6 @@ export function AppProvider({ children }) {
 
     if (!isPending) {
       if (user) {
-        // Check if user data has actually changed to prevent unnecessary updates
         const hasUserChanged =
           !state.user ||
           state.user.id !== user.id ||
@@ -215,8 +269,7 @@ export function AppProvider({ children }) {
         dispatch({ type: "LOGOUT" });
       }
     }
-    // Only depend on user and isPending, not state.user to avoid loops
-  }, [user, isPending]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, isPending]);
 
   // Debug: Log state changes (only in development)
   useEffect(() => {
@@ -227,9 +280,16 @@ export function AppProvider({ children }) {
         cartItems: state.cart?.length,
         userBids: state.userBids?.length,
         userListings: state.userListings?.length,
+        userOrders: state.userOrders?.length,
       });
     }
-  }, [state.user, state.cart, state.userBids, state.userListings]);
+  }, [
+    state.user,
+    state.cart,
+    state.userBids,
+    state.userListings,
+    state.userOrders,
+  ]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
