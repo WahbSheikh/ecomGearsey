@@ -12,21 +12,22 @@ import {
   Mail,
   Phone,
   MapPin,
-  Filter,
   Download,
-  UserPlus,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
 import { userAPI } from "../../../../../apis/userAPI";
 import { useAppContext } from "../../../../../config/context/AppContext";
+import { useAuth } from "../../../../../hooks/useAuth";
 
 function UsersManagementTab() {
   const { dispatch } = useAppContext();
+  const { user: currentUser } = useAuth(); // ✅ Get current logged-in admin
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); // 'table' or 'grid'
 
   useEffect(() => {
     fetchUsers();
@@ -51,6 +52,24 @@ function UsersManagementTab() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ✅ Check if user is the current admin
+  const isCurrentAdmin = (userId) => {
+    return currentUser?.id === userId || currentUser?.id === userId;
+  };
+
+  // ✅ Check if user is an admin
+  const isAdmin = (user) => {
+    return user.role === "admin";
+  };
+
+  // ✅ Check if there's already an admin (and it's not the user being changed)
+  const hasExistingAdmin = (excludeUserId) => {
+    return users.some(
+      (u) =>
+        u.role === "admin" && u.id !== excludeUserId && u._id !== excludeUserId
+    );
   };
 
   const getRoleIcon = (role) => {
@@ -98,6 +117,32 @@ function UsersManagementTab() {
   };
 
   const handleDeleteUser = async (userId) => {
+    const user = users.find((u) => u.id === userId || u._id === userId);
+
+    // ✅ Prevent deleting yourself
+    if (isCurrentAdmin(userId)) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "You cannot delete your own admin account!",
+        },
+      });
+      return;
+    }
+
+    // ✅ Prevent deleting other admins
+    if (isAdmin(user)) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "You cannot delete another admin account!",
+        },
+      });
+      return;
+    }
+
     if (
       !window.confirm(
         "Are you sure you want to delete this user? This action cannot be undone."
@@ -119,14 +164,60 @@ function UsersManagementTab() {
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
-        payload: { type: "error", message: "Failed to delete user" },
+        payload: {
+          type: "error",
+          message: error.message || "Failed to delete user",
+        },
       });
     }
   };
 
   const handleChangeRole = async (userId, newRole) => {
+    const user = users.find((u) => u.id === userId || u._id === userId);
+
+    // ✅ Prevent changing your own role
+    if (isCurrentAdmin(userId)) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "You cannot change your own admin role!",
+        },
+      });
+      return;
+    }
+
+    // ✅ Prevent creating more than one admin
+    if (newRole === "admin" && hasExistingAdmin(userId)) {
+      const existingAdmin = users.find(
+        (u) => u.role === "admin" && u.id !== userId && u._id !== userId
+      );
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: `Only one admin allowed! ${
+            existingAdmin?.name || existingAdmin?.email
+          } is currently the admin.`,
+        },
+      });
+      return;
+    }
+
+    // ✅ Prevent demoting other admins
+    if (isAdmin(user) && newRole !== "admin") {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "You cannot demote another admin!",
+        },
+      });
+      return;
+    }
+
     try {
-      await userAPI.updateUserRole(userId, newRole);
+      await userAPI.updateUserRole(userId, newRole, users);
       setUsers(
         users.map((user) =>
           user.id === userId || user._id === userId
@@ -145,13 +236,41 @@ function UsersManagementTab() {
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
-        payload: { type: "error", message: "Failed to update user role" },
+        payload: {
+          type: "error",
+          message: error.message || "Failed to update user role",
+        },
       });
     }
   };
 
   const handleToggleStatus = async (userId) => {
     const user = users.find((u) => u.id === userId || u._id === userId);
+
+    // ✅ Prevent blocking yourself
+    if (isCurrentAdmin(userId)) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "You cannot block your own admin account!",
+        },
+      });
+      return;
+    }
+
+    // ✅ Prevent blocking other admins
+    if (isAdmin(user)) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        payload: {
+          type: "error",
+          message: "You cannot block another admin account!",
+        },
+      });
+      return;
+    }
+
     const isCurrentlyBlocked = user?.blocked || user?.status === "blocked";
 
     try {
@@ -180,7 +299,10 @@ function UsersManagementTab() {
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
-        payload: { type: "error", message: "Failed to update user status" },
+        payload: {
+          type: "error",
+          message: error.message || "Failed to update user status",
+        },
       });
     }
   };
@@ -217,6 +339,23 @@ function UsersManagementTab() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* ✅ Admin Protection Warning Banner */}
+      <div className="bg-gradient-to-r from-warning-500/10 to-warning-500/5 border-l-4 border-warning-500 rounded-lg p-4 flex items-start gap-3">
+        <AlertCircle
+          className="text-warning-500 flex-shrink-0 mt-0.5"
+          size={20}
+        />
+        <div>
+          <p className="text-font-main font-semibold text-sm">
+            Admin Protection Active
+          </p>
+          <p className="text-font-secondary text-xs mt-1">
+            You cannot modify or delete admin accounts. Only one admin is
+            allowed on the platform.
+          </p>
+        </div>
+      </div>
+
       {/* Enhanced Header with Gradient Background */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated border border-border p-8 shadow-xl">
         {/* Animated Background Elements */}
@@ -404,6 +543,7 @@ function UsersManagementTab() {
                 filteredUsers.map((user, index) => {
                   const userId = user.id || user._id;
                   const isDropdownOpen = activeDropdown === userId;
+                  const isProtected = isAdmin(user); // ✅ Admin accounts are protected
 
                   return (
                     <tr
@@ -419,11 +559,25 @@ function UsersManagementTab() {
                                 user.email?.charAt(0).toUpperCase()}
                             </div>
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success-500 rounded-full border-2 border-surface-elevated"></div>
+                            {/* ✅ Protected Badge for Admins */}
+                            {isProtected && (
+                              <div className="absolute -top-1 -left-1 w-5 h-5 bg-primary-500 rounded-full border-2 border-surface-elevated flex items-center justify-center">
+                                <Lock size={10} className="text-white" />
+                              </div>
+                            )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-font-main font-semibold text-base truncate">
-                              {user.name || "No Name"}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-font-main font-semibold text-base truncate">
+                                {user.name || "No Name"}
+                              </p>
+                              {/* ✅ Show if this is YOU */}
+                              {isCurrentAdmin(userId) && (
+                                <span className="px-2 py-0.5 bg-primary-500/20 text-primary-500 text-[10px] font-bold rounded-full">
+                                  YOU
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-1.5 text-font-secondary text-sm mt-0.5">
                               <Mail size={12} />
                               <p className="truncate">{user.email}</p>
@@ -441,6 +595,7 @@ function UsersManagementTab() {
                           <span className="text-sm font-bold capitalize">
                             {user.role}
                           </span>
+                          {isProtected && <Lock size={12} className="ml-1" />}
                         </div>
                       </td>
                       <td className="px-6 py-5">{getStatusBadge(user)}</td>
@@ -462,80 +617,113 @@ function UsersManagementTab() {
                       </td>
                       <td className="px-6 py-5">
                         <div className="relative">
-                          <button
-                            onClick={() =>
-                              setActiveDropdown(isDropdownOpen ? null : userId)
-                            }
-                            className="p-2.5 hover:bg-surface rounded-xl transition-all duration-200 hover:shadow-md group-hover:bg-surface/50"
-                          >
-                            <MoreVertical
-                              size={20}
-                              className="text-font-secondary group-hover:text-font-main transition-colors"
-                            />
-                          </button>
-
-                          {isDropdownOpen && (
+                          {/* ✅ Disable dropdown for protected users */}
+                          {isProtected ? (
+                            <div className="p-2.5 rounded-xl bg-surface-elevated border border-border flex items-center gap-2">
+                              <Lock size={16} className="text-font-secondary" />
+                              <span className="text-xs text-font-secondary font-medium">
+                                Protected
+                              </span>
+                            </div>
+                          ) : (
                             <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActiveDropdown(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-surface-elevated rounded-xl shadow-2xl border-2 border-border py-2 z-20 animate-scale-in">
-                                <div className="px-4 py-2.5 text-xs font-bold text-font-secondary uppercase tracking-wider border-b border-border">
-                                  Change Role
-                                </div>
-                                {["customer", "seller", "admin"].map((role) => (
-                                  <button
-                                    key={role}
-                                    onClick={() =>
-                                      handleChangeRole(userId, role)
-                                    }
-                                    disabled={user.role === role}
-                                    className={`w-full text-left px-4 py-3 text-sm transition-all flex items-center gap-3 ${
-                                      user.role === role
-                                        ? "text-font-secondary cursor-not-allowed bg-surface/30"
-                                        : "text-font-main hover:bg-surface hover:pl-5"
-                                    }`}
-                                  >
-                                    {getRoleIcon(role)}
-                                    <span className="capitalize font-medium">
-                                      {role}
-                                    </span>
-                                    {user.role === role && (
-                                      <span className="ml-auto text-xs bg-primary-500/20 text-primary-500 px-2 py-0.5 rounded-full">
-                                        Current
-                                      </span>
+                              <button
+                                onClick={() =>
+                                  setActiveDropdown(
+                                    isDropdownOpen ? null : userId
+                                  )
+                                }
+                                className="p-2.5 hover:bg-surface rounded-xl transition-all duration-200 hover:shadow-md group-hover:bg-surface/50"
+                              >
+                                <MoreVertical
+                                  size={20}
+                                  className="text-font-secondary group-hover:text-font-main transition-colors"
+                                />
+                              </button>
+
+                              {isDropdownOpen && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-10"
+                                    onClick={() => setActiveDropdown(null)}
+                                  />
+                                  <div className="absolute right-0 mt-2 w-56 bg-surface-elevated rounded-xl shadow-2xl border-2 border-border py-2 z-20 animate-scale-in">
+                                    <div className="px-4 py-2.5 text-xs font-bold text-font-secondary uppercase tracking-wider border-b border-border">
+                                      Change Role
+                                    </div>
+                                    {["customer", "seller", "admin"].map(
+                                      (role) => {
+                                        const isDisabled =
+                                          user.role === role ||
+                                          (role === "admin" &&
+                                            hasExistingAdmin(userId));
+
+                                        return (
+                                          <button
+                                            key={role}
+                                            onClick={() =>
+                                              !isDisabled &&
+                                              handleChangeRole(userId, role)
+                                            }
+                                            disabled={isDisabled}
+                                            className={`w-full text-left px-4 py-3 text-sm transition-all flex items-center gap-3 ${
+                                              isDisabled
+                                                ? "text-font-secondary cursor-not-allowed bg-surface/30"
+                                                : "text-font-main hover:bg-surface hover:pl-5"
+                                            }`}
+                                          >
+                                            {getRoleIcon(role)}
+                                            <span className="capitalize font-medium">
+                                              {role}
+                                            </span>
+                                            {user.role === role && (
+                                              <span className="ml-auto text-xs bg-primary-500/20 text-primary-500 px-2 py-0.5 rounded-full">
+                                                Current
+                                              </span>
+                                            )}
+                                            {role === "admin" &&
+                                              hasExistingAdmin(userId) &&
+                                              user.role !== "admin" && (
+                                                <Lock
+                                                  size={12}
+                                                  className="ml-auto text-error-500"
+                                                />
+                                              )}
+                                          </button>
+                                        );
+                                      }
                                     )}
-                                  </button>
-                                ))}
 
-                                <div className="border-t border-border my-2" />
+                                    <div className="border-t border-border my-2" />
 
-                                <button
-                                  onClick={() => handleToggleStatus(userId)}
-                                  className="w-full text-left px-4 py-3 text-sm text-warning-500 hover:bg-surface transition-all flex items-center gap-3 hover:pl-5 font-medium"
-                                >
-                                  {user.blocked || user.status === "blocked" ? (
-                                    <>
-                                      <CheckCircle size={18} />
-                                      Unblock User
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Ban size={18} />
-                                      Block User
-                                    </>
-                                  )}
-                                </button>
+                                    <button
+                                      onClick={() => handleToggleStatus(userId)}
+                                      className="w-full text-left px-4 py-3 text-sm text-warning-500 hover:bg-surface transition-all flex items-center gap-3 hover:pl-5 font-medium"
+                                    >
+                                      {user.blocked ||
+                                      user.status === "blocked" ? (
+                                        <>
+                                          <CheckCircle size={18} />
+                                          Unblock User
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Ban size={18} />
+                                          Block User
+                                        </>
+                                      )}
+                                    </button>
 
-                                <button
-                                  onClick={() => handleDeleteUser(userId)}
-                                  className="w-full text-left px-4 py-3 text-sm text-error-500 hover:bg-surface transition-all flex items-center gap-3 hover:pl-5 font-medium"
-                                >
-                                  <Trash2 size={18} />
-                                  Delete User
-                                </button>
-                              </div>
+                                    <button
+                                      onClick={() => handleDeleteUser(userId)}
+                                      className="w-full text-left px-4 py-3 text-sm text-error-500 hover:bg-surface transition-all flex items-center gap-3 hover:pl-5 font-medium"
+                                    >
+                                      <Trash2 size={18} />
+                                      Delete User
+                                    </button>
+                                  </div>
+                                </>
+                              )}
                             </>
                           )}
                         </div>

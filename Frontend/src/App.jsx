@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,14 +8,12 @@ import {
 import Navigation from "./roles/General/components/Navigation/Navigation";
 import NotificationToast from "./roles/General/components/NotificationToast/NotificationToast";
 import Footer from "./roles/General/components/Footer/Footer";
-import { AppProvider } from "./config/context/AppContext";
+import { AppProvider, useAppContext } from "./config/context/AppContext";
 import { useAuth } from "./hooks/useAuth";
 
 // Lazy load components for better performance
 const Homepage = lazy(() => import("./roles/General/views/Home/Homepage"));
-const ProductGrid = lazy(() =>
-  import("./roles/Customer/views/MarketPlace/ProductGrid")
-);
+// ✅ REMOVED - ProductGrid is inside Filter component
 const ProductDetails = lazy(() =>
   import("./roles/Customer/views/ProductDetails/ProductDetails")
 );
@@ -180,6 +178,25 @@ function NotFound() {
 }
 
 function AppRoutes() {
+  const { user, isPending } = useAuth();
+  const { dispatch } = useAppContext();
+
+  // ✅ Sync useAuth user with AppContext
+  useEffect(() => {
+    if (user) {
+      console.log("🔄 Syncing user to AppContext:", user);
+      dispatch({
+        type: "SET_USER",
+        payload: user,
+      });
+    } else if (!isPending) {
+      console.log("🔄 No user found, clearing AppContext");
+      dispatch({
+        type: "LOGOUT_USER",
+      });
+    }
+  }, [user, isPending, dispatch]);
+
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       <Navigation />
@@ -199,7 +216,8 @@ function AppRoutes() {
             />
 
             {/* Public Routes */}
-            <Route path="/marketplace" element={<ProductGrid />} />
+            {/* ✅ CHANGED: Use Filter component for both marketplace and filter */}
+            <Route path="/marketplace" element={<Filter />} />
             <Route path="/filter" element={<Filter />} />
             <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/cart" element={<Cart />} />

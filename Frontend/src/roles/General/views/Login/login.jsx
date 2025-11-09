@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../hooks/useAuth";
-import { useAuthRedirect } from "./hooks/useAuthRedirect";
 import { useLoginForm } from "./hooks/useLoginForm";
 import { useSignupForm } from "./hooks/useSignupForm";
 import AuthHeader from "./components/AuthHeader";
@@ -13,14 +12,20 @@ import { ROLES } from "./utils/constants";
 
 function Login() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isPending } = useAuth(); // ✅ Added isPending
   const [isLogin, setIsLogin] = useState(true);
-
-  // Redirect if already logged in
-  useAuthRedirect(user);
 
   const loginForm = useLoginForm();
   const signupForm = useSignupForm();
+
+  // ✅ Redirect if already logged in (after loading complete)
+  useEffect(() => {
+    if (!isPending && user) {
+      console.log("👤 User already logged in, redirecting...", user);
+      const dashboardPath = authService.getRoleDashboardPath(user.role);
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [user, isPending, navigate]);
 
   // Handle login submit
   const handleLoginSubmit = async (e) => {
@@ -34,10 +39,8 @@ function Login() {
 
       console.log("🎯 Navigating to dashboard for role:", loggedInUser.role);
 
-      // Navigate with user data
       const dashboardPath = authService.getRoleDashboardPath(loggedInUser.role);
 
-      // Use setTimeout to ensure state updates complete
       setTimeout(() => {
         navigate(dashboardPath, {
           replace: true,
@@ -49,22 +52,32 @@ function Login() {
     }
   };
 
-  // Handle signup submit - NO auto-navigation
+  // Handle signup submit
   const handleSignupSubmit = async (e) => {
     try {
-      const result = await signupForm.handleSubmit(e);
+      await signupForm.handleSubmit(e);
 
-      // ✅ If signup successful (returns null), switch to login tab
-      if (result === null) {
-        console.log("✅ Signup successful, switching to login tab");
-        setTimeout(() => {
-          setIsLogin(true); // Switch to login tab
-        }, 500);
-      }
+      console.log("✅ Signup successful, switching to login tab");
+      setTimeout(() => {
+        setIsLogin(true);
+        signupForm.resetForm();
+      }, 1000);
     } catch (error) {
       console.error("❌ Signup submit error:", error);
     }
   };
+
+  // ✅ Show loading while checking auth
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">

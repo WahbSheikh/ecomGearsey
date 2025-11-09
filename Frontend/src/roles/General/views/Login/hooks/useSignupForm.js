@@ -29,13 +29,20 @@ export const useSignupForm = () => {
     const validationErrors = validateSignupForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      return;
+      return null;
     }
 
     setIsLoading(true);
 
     try {
-      // ✅ Step 1: Create user account (without role in additionalFields)
+      console.log(
+        "📝 Starting signup for:",
+        formData.email,
+        "as",
+        selectedRole
+      );
+
+      // ✅ Step 1: Create user account
       const signupResult = await authService.signup({
         email: formData.email,
         password: formData.password,
@@ -44,9 +51,16 @@ export const useSignupForm = () => {
         address: formData.address,
       });
 
-      console.log("✅ User created:", signupResult);
+      console.log("✅ Signup result:", signupResult);
 
-      // ✅ Step 2: Refresh session to get the user ID
+      if (signupResult.error) {
+        throw new Error(signupResult.error.message || "Signup failed");
+      }
+
+      // ✅ Step 2: Wait for session to be created
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // ✅ Step 3: Refresh session to get the user ID
       const session = await refreshSession();
       const newUser = session?.data?.user;
 
@@ -54,53 +68,68 @@ export const useSignupForm = () => {
         throw new Error("Failed to get user ID after signup");
       }
 
-      console.log("✅ Session refreshed, user ID:", newUser.id);
+      console.log("✅ New user created with ID:", newUser.id);
 
-      // ✅ Step 3: Set the role using admin.setRole (only if not "customer")
+      // ✅ Step 4: Set the role (if not customer)
       if (selectedRole !== "customer") {
         console.log(`🔄 Setting role to ${selectedRole}...`);
+
         const roleResult = await authService.setUserRole(
           newUser.id,
           selectedRole
         );
-        console.log("✅ Role set:", roleResult);
 
-        // ✅ Step 4: Refresh session again to get updated role
+        if (roleResult.error) {
+          console.error("⚠️ Failed to set role:", roleResult.error);
+          // Continue anyway - user is created
+        } else {
+          console.log("✅ Role set successfully");
+        }
+
+        // ✅ Step 5: Refresh session again to get updated role
+        await new Promise((resolve) => setTimeout(resolve, 300));
         const updatedSession = await refreshSession();
         const updatedUser = updatedSession?.data?.user;
+
+        console.log("✅ User with role:", updatedUser);
 
         dispatch({
           type: "ADD_NOTIFICATION",
           payload: {
             type: "success",
-            message: `Account created successfully as ${selectedRole}! Welcome, ${updatedUser?.name}!`,
+            message: `Account created as ${selectedRole}! Please sign in.`,
           },
         });
-
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        return updatedUser;
+      } else {
+        dispatch({
+          type: "ADD_NOTIFICATION",
+          payload: {
+            type: "success",
+            message: "Account created successfully! Please sign in.",
+          },
+        });
       }
 
-      // Show success notification for customer
-      dispatch({
-        type: "ADD_NOTIFICATION",
-        payload: {
-          type: "success",
-          message: `Account created successfully! Welcome, ${newUser?.name}!`,
-        },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return newUser;
+      // ✅ Return null to indicate signup success (user should login)
+      return null;
     } catch (error) {
       console.error("❌ Signup error:", error);
+
+      const errorMessage = error.message || "Signup failed. Please try again.";
+
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {
           type: "error",
-          message: error.message || "Signup failed. Please try again.",
+          message: errorMessage,
         },
       });
+
+      setErrors({
+        email: " ",
+        password: errorMessage,
+      });
+
       throw error;
     } finally {
       setIsLoading(false);

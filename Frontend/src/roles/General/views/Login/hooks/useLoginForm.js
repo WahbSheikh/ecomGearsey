@@ -31,27 +31,39 @@ export const useLoginForm = () => {
     const validationErrors = validateLoginForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      return;
+      return null;
     }
 
     setIsLoading(true);
 
     try {
-      console.log("🔐 Starting login...");
+      console.log("🔐 Starting login with:", formData.email);
 
-      // Login
-      await authService.login(formData.email, formData.password);
-      console.log("✅ Login API call successful");
+      // ✅ Step 1: Login
+      const loginResult = await authService.login(
+        formData.email,
+        formData.password
+      );
+      console.log("✅ Login API result:", loginResult);
 
-      // Refresh session
+      if (loginResult.error) {
+        throw new Error(loginResult.error.message || "Login failed");
+      }
+
+      // ✅ Step 2: Wait a bit for session to be created
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // ✅ Step 3: Refresh session to get user data
       const session = await refreshSession();
-      const loggedInUser = session?.data?.user;
+      console.log("✅ Session after login:", session);
 
-      console.log("✅ Session refreshed, user:", loggedInUser);
+      const loggedInUser = session?.data?.user;
 
       if (!loggedInUser) {
         throw new Error("Failed to get user data after login");
       }
+
+      console.log("✅ Logged in user:", loggedInUser);
 
       // Show success notification
       dispatch({
@@ -62,19 +74,28 @@ export const useLoginForm = () => {
         },
       });
 
-      console.log("✅ Login complete, returning user");
-
       return loggedInUser;
     } catch (error) {
       console.error("❌ Login error:", error);
+
+      // Show user-friendly error
+      const errorMessage =
+        error.message || "Login failed. Please check your credentials.";
+
       dispatch({
         type: "ADD_NOTIFICATION",
         payload: {
           type: "error",
-          message: error.message || "Login failed. Please try again.",
+          message: errorMessage,
         },
       });
-      throw error;
+
+      setErrors({
+        email: " ",
+        password: errorMessage,
+      });
+
+      return null;
     } finally {
       setIsLoading(false);
     }

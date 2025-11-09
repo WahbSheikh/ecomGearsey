@@ -83,6 +83,9 @@ function ListingsTab() {
       });
       setEditModal({ isOpen: false, product: null });
       fetchMyListings();
+
+      // ✅ Refresh global products in AppContext
+      refreshGlobalProducts();
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
@@ -109,6 +112,9 @@ function ListingsTab() {
       });
       setDeleteModal({ isOpen: false, product: null });
       fetchMyListings();
+
+      // ✅ Refresh global products in AppContext
+      refreshGlobalProducts();
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",
@@ -122,13 +128,47 @@ function ListingsTab() {
     }
   };
 
+  // ✅ NEW: Refresh global products after status change
+  const refreshGlobalProducts = async () => {
+    try {
+      const response = await productListingAPI.getProducts({ limit: 100 });
+      const products = response.products || [];
+
+      const transformedProducts = products.map((p) => ({
+        id: p._id,
+        title: p.title || p.name,
+        description: p.description,
+        price: p.price,
+        image: p.imageUrl || p.imageId,
+        images: [p.imageUrl || p.imageId],
+        category: p.categoryId?.name || "Uncategorized",
+        seller: p.sellerId?.name || "Unknown",
+        condition: p.condition,
+        type: p.is_auction ? "auction" : "fixed",
+        status: p.status || "Active",
+        inStock: p.status === "Active",
+        currentBid: p.is_auction ? p.price : null,
+        timeLeft: p.is_auction ? { hours: 2, minutes: 30 } : null,
+      }));
+
+      dispatch({
+        type: "SET_PRODUCTS",
+        payload: transformedProducts,
+      });
+
+      console.log("✅ Global products refreshed after status change");
+    } catch (error) {
+      console.error("❌ Failed to refresh global products:", error);
+    }
+  };
+
   // Toggle product status between Active and Sold
   const handleToggleStatus = async (productId, currentStatus) => {
     setTogglingStatus(productId);
     try {
       const newStatus = currentStatus === "Active" ? "Sold" : "Active";
 
-      await fetch(
+      const response = await fetch(
         `${
           import.meta.env.VITE_API_URL || "http://localhost:3000"
         }/api/products/status`,
@@ -141,6 +181,10 @@ function ListingsTab() {
           }),
         }
       );
+
+      if (!response.ok) {
+        throw new Error("Failed to update status");
+      }
 
       // Update local state
       setUserListings(
@@ -156,6 +200,9 @@ function ListingsTab() {
           message: `Product marked as ${newStatus}`,
         },
       });
+
+      // ✅ Refresh global products so customers see updated status
+      await refreshGlobalProducts();
     } catch (error) {
       dispatch({
         type: "ADD_NOTIFICATION",

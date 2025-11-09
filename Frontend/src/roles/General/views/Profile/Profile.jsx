@@ -14,7 +14,7 @@ import {
   Package,
   X,
 } from "lucide-react";
-import { useAppContext } from "../../../../config/context/AppContext";
+
 import { useAuth } from "../../../../hooks/useAuth";
 import { authClient } from "../../../../lib/auth";
 
