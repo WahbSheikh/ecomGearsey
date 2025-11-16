@@ -1,4 +1,4 @@
-import { Shield, Store, Users } from "lucide-react";
+import { Store, Users } from "lucide-react";
 
 export const ROLES = [
   {
@@ -13,12 +13,7 @@ export const ROLES = [
     icon: Store,
     description: "Sell your car parts",
   },
-  {
-    id: "admin",
-    name: "Admin",
-    icon: Shield,
-    description: "Manage the platform",
-  },
+  // Admin role removed - admin is created automatically on server startup
 ];
 
 export const INITIAL_FORM_DATA = {

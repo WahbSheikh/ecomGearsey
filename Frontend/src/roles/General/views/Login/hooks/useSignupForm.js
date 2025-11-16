@@ -32,32 +32,6 @@ export const useSignupForm = () => {
       return null;
     }
 
-    // ✅ NEW: Check if trying to create admin when one exists
-    if (selectedRole === "admin") {
-      try {
-        const adminExists = await authService.checkAdminExists();
-        if (adminExists) {
-          console.log("⚠️ Attempted to create admin when one already exists");
-          dispatch({
-            type: "ADD_NOTIFICATION",
-            payload: {
-              type: "error",
-              message:
-                "Admin account already exists. Please select Customer or Seller role.",
-            },
-          });
-          setErrors({
-            email: " ",
-            password: "Admin account already exists on the platform.",
-          });
-          return null;
-        }
-      } catch (error) {
-        console.error("Error checking admin existence:", error);
-        // Continue with signup if check fails (fail open for better UX)
-      }
-    }
-
     setIsLoading(true);
 
     try {
@@ -107,23 +81,6 @@ export const useSignupForm = () => {
 
         if (roleResult.error) {
           console.error("⚠️ Failed to set role:", roleResult.error);
-
-          // ✅ Check if error is about admin already existing
-          if (
-            roleResult.error.message?.includes("Admin account already exists")
-          ) {
-            dispatch({
-              type: "ADD_NOTIFICATION",
-              payload: {
-                type: "error",
-                message:
-                  "Admin account already exists. Your account was created as Customer.",
-              },
-            });
-            // User account is created, just with customer role
-            return null;
-          }
-
           // Continue anyway - user is created
         } else {
           console.log("✅ Role set successfully");

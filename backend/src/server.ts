@@ -1,14 +1,12 @@
 import 'dotenv/config'
 
-import express, {type Express} from "express";
+import express, {type Express, type Request, type Response} from "express";
 import { toNodeHandler } from "better-auth/node";
 import { auth, client } from "@/lib/auth.js";
 import { connectDB } from '@/db/config.js';
 import cors from 'cors';
 import apiRouter from '@/api/router.js';
-
-// Connect to the database
-connectDB();
+import { setupDefaultAdmin } from '@/utils/setupAdmin.js';
 
 const app : Express = express();
 const PORT = process.env.PORT || 3000;
@@ -57,8 +55,26 @@ app.get("/api/auth/check-admin", async (req: Request, res: Response) => {
 // Other API routes
 app.use('/api', apiRouter);
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📍 Local: http://localhost:${PORT}`);
-  console.log(`🔐 Better Auth URL: ${process.env.BETTER_AUTH_URL}`);
-});
+// Initialize server
+async function startServer() {
+  try {
+    // Connect to database first
+    await connectDB();
+    console.log("✅ Database connected");
+    
+    // Setup admin user after DB connection
+    await setupDefaultAdmin();
+    
+    // Start listening
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`📍 Local: http://localhost:${PORT}`);
+      console.log(`🔐 Better Auth URL: ${process.env.BETTER_AUTH_URL}`);
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+startServer();

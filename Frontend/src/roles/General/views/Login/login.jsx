@@ -15,36 +15,8 @@ function Login() {
   const { user, isPending } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
 
-  // ✅ NEW: Admin existence state
-  const [adminExists, setAdminExists] = useState(false);
-  const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
-
   const loginForm = useLoginForm();
   const signupForm = useSignupForm();
-
-  // ✅ Check if admin exists on mount
-  useEffect(() => {
-    const checkAdmin = async () => {
-      setIsCheckingAdmin(true);
-      try {
-        const exists = await authService.checkAdminExists();
-        console.log("🔍 Admin exists:", exists);
-        setAdminExists(exists);
-
-        // If admin exists and user selected admin, switch to customer
-        if (exists && signupForm.selectedRole === "admin") {
-          signupForm.setSelectedRole("customer");
-        }
-      } catch (error) {
-        console.error("❌ Error checking admin:", error);
-        setAdminExists(false);
-      } finally {
-        setIsCheckingAdmin(false);
-      }
-    };
-
-    checkAdmin();
-  }, []);
 
   // ✅ Redirect if already logged in (after loading complete)
   useEffect(() => {
@@ -116,8 +88,6 @@ function Login() {
           <RoleSelector
             selectedRole={signupForm.selectedRole}
             onRoleChange={signupForm.setSelectedRole}
-            adminExists={adminExists}
-            isCheckingAdmin={isCheckingAdmin}
           />
         )}
 
