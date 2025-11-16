@@ -15,13 +15,12 @@ export const auth = betterAuth({
   
   plugins: [
     admin({
-      defaultRole: "customer", // ✅ Set default role
+      defaultRole: "customer",
     })
   ],
   
   user: {
     additionalFields: {
-      // ❌ REMOVE the role field - admin plugin handles it
       address: {
         type: "string",
         required: true,
@@ -44,14 +43,19 @@ export const auth = betterAuth({
       },
     },
   },
+  
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
     minPasswordLength: 6,
   },
+  
   advanced: {
     crossSubDomainCookies: {
       enabled: false,
     },
   },
 });
+
+// Export db and client for use in other files
+export { db, client };

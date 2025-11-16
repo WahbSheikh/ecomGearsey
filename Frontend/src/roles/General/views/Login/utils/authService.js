@@ -25,7 +25,7 @@ export const authService = {
     return result;
   },
 
-  // ✅ New method to set user role
+  // ✅ Method to set user role
   async setUserRole(userId, role) {
     const result = await authClient.admin.setRole({
       userId: userId,
@@ -37,6 +37,27 @@ export const authService = {
     }
 
     return result;
+  },
+
+  // ✅ NEW: Check if admin exists
+  async checkAdminExists() {
+    try {
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/auth/check-admin`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to check admin status");
+      }
+
+      const data = await response.json();
+      return data.adminExists || false;
+    } catch (error) {
+      console.error("❌ Error checking admin existence:", error);
+      return false; // Default to allowing admin creation if check fails
+    }
   },
 
   getRoleDashboardPath(role) {

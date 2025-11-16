@@ -15,7 +15,8 @@ export function useAuth() {
 
         if (session?.data?.user) {
           console.log("✅ useAuth - User found:", session.data.user);
-          console.log("👤 User role:", session.data.user.role); // ✅ Log the role
+          console.log("👤 User role:", session.data.user.role);
+          console.log("👤 User ID:", session.data.user.id);
           setUser(session.data.user);
         } else {
           console.log("❌ useAuth - No user in session");
@@ -42,7 +43,8 @@ export function useAuth() {
 
       if (session?.data?.user) {
         console.log("✅ Session refreshed with user:", session.data.user);
-        console.log("👤 User role:", session.data.user.role); // ✅ Log the role
+        console.log("👤 User role:", session.data.user.role);
+        console.log("👤 User ID:", session.data.user.id);
         setUser(session.data.user);
       } else {
         console.log("❌ No user after refresh");
@@ -60,6 +62,7 @@ export function useAuth() {
 
   const signOut = async () => {
     console.log("👋 Signing out...");
+    setIsPending(true);
     try {
       await authClient.signOut();
       setUser(null);
@@ -67,13 +70,30 @@ export function useAuth() {
     } catch (error) {
       console.error("❌ Error signing out:", error);
       throw error;
+    } finally {
+      setIsPending(false);
     }
   };
 
+  // ✅ NEW: Helper to check if current user is admin
+  const isAdmin = user?.role === "admin";
+  const isSeller = user?.role === "seller";
+  const isCustomer = user?.role === "customer";
+
   console.log("📊 useAuth returning:", {
-    user: user ? { email: user.email, role: user.role } : null,
+    user: user
+      ? {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+        }
+      : null,
     isPending,
     loading: isPending,
+    isAdmin,
+    isSeller,
+    isCustomer,
   });
 
   return {
@@ -82,5 +102,8 @@ export function useAuth() {
     loading: isPending,
     refreshSession,
     signOut,
+    isAdmin,
+    isSeller,
+    isCustomer,
   };
 }
