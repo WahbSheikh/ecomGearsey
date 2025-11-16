@@ -1,6 +1,9 @@
 # Node Modules
 /node_modules/*
 
+# Build artifacts
+/dist/*
+
 # Logs
 logs
 *.log

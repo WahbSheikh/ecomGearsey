@@ -21,17 +21,34 @@ Gearsey's backend is a Node.js service built with TypeScript, Express, and Mongo
 Configuration is driven by environment variables. Create a `.env` in `backend/` (never commit it) and supply the following keys:
 
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/gearsey"
-AUTH_SERVICE_URL="http://localhost:4000"
-AUTH_SERVICE_SECRET="<shared-secret>"
-STRIPE_SECRET_KEY="sk_test_..."
+MONGO_URI="mongodb://user:password@localhost:27017/gearsey"
+BETTER_AUTH_SECRET="<your-secret-key>"
+BETTER_AUTH_URL="http://localhost:3000"
+CLOUDINARY_CLOUD_NAME="<your-cloudinary-cloud-name>"
+CLOUDINARY_API_KEY="<your-cloudinary-api-key>"
+CLOUDINARY_API_SECRET="<your-cloudinary-api-secret>"
 PORT=3000
 NODE_ENV=development
 ```
 
-- `DATABASE_URL` is consumed by Prisma in `src/db/config.ts`.
-- `AUTH_SERVICE_URL` and `AUTH_SERVICE_SECRET` configure the auth client for token verification.
+- `MONGO_URI` is the MongoDB connection string.
+- `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` configure the Better Auth library for authentication.
+- `CLOUDINARY_*` variables configure Cloudinary for image uploads.
 - `PORT` defines the HTTP port the Express server listens on.
+
+### Default Admin Account
+On first startup, the backend **automatically creates a default admin account** with the following credentials:
+
+```
+Email: admin@admin.com
+Password: admin582005
+```
+
+**Important Notes:**
+- The admin account is created only once during the first database initialization.
+- If the admin account already exists, the system verifies and ensures it has the correct role and password.
+- **Change the default password immediately after first login** for security purposes.
+- Admin signup is not available in the frontend UI; the admin role can only be assigned through the database or by the auto-creation process.
 
 ### Dependency Management and Scripts
 Install dependencies with `npm install`. The most important package scripts defined in `package.json` are:
@@ -42,13 +59,16 @@ Install dependencies with `npm install`. The most important package scripts defi
 - `npm run lint` — Executes ESLint with the project ruleset.
 
 ### Database and MongoDB
-- Mongoose client is configured in `src/db/config.ts`; reuse the exported instance to avoid duplicated connections.
+- MongoDB client is configured in `src/db/config.ts` and `src/lib/auth.ts`; reuse the exported instance to avoid duplicated connections.
 - Domain models in `src/models/` wrap Mongoose calls to keep controllers agnostic of raw ORM queries.
+- The system uses Better Auth with MongoDB adapter for user authentication and authorization.
 
 ### Authentication Flow
-- Incoming requests pass through middleware that invokes `src/lib/auth.ts` helpers.
-- Controllers expect an attached `req.user` (or similar context) when authorization is required; ensure middleware is mounted before routers.
+- Incoming requests pass through Better Auth middleware that validates authentication tokens.
+- Better Auth is configured with the admin plugin to support role-based access control.
+- Controllers expect an authenticated user context when authorization is required.
 - Role checks and access policies should be centralized to keep individual controllers small.
+- Available roles: `admin`, `seller`, `customer` (default role for new signups).
 
 ### Request Lifecycle
 1. `server.ts` initializes Express, loads global middleware (JSON parsing, logging, CORS), and attaches the domain routers from `src/api/`.

@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth.js";
+import { auth, db } from "@/lib/auth.js";
 
 export async function createUser(
   email: string,
@@ -8,18 +8,25 @@ export async function createUser(
   address: string,
   phone: string
 ) {
+  // Create user with better-auth API (role will be set to default "customer")
   await auth.api.signUpEmail({
     body: {
       name,
       email,
       password,
-      role,
       address,
       phone,
-      rating: 0,
-      total_reviews: 0,
     },
   });
 
-  console.log("User created:", email);
+  // Update role if it's different from default
+  if (role !== "customer") {
+    const usersCollection = db.collection("user");
+    await usersCollection.updateOne(
+      { email },
+      { $set: { role, updatedAt: new Date() } }
+    );
+  }
+
+  console.log("User created:", email, "with role:", role);
 }
