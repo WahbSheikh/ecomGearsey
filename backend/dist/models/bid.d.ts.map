@@ -1,0 +1,1 @@
+{"version":3,"file":"bid.d.ts","sourceRoot":"","sources":["../../src/models/bid.ts"],"names":[],"mappings":"AAAA,OAAO,EAAS,KAAK,EAAU,MAAM,UAAU,CAAC;AAEhD,MAAM,WAAW,IAAI;IACjB,SAAS,EAAE,MAAM,CAAC;IAClB,MAAM,EAAE,MAAM,CAAC;IACf,UAAU,EAAE,MAAM,CAAC;CACtB;AAQD,eAAO,MAAM,GAAG,EAAE,KAAK,CAAC,IAAI,CAAiC,CAAC"}
